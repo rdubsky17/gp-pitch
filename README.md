@@ -3,6 +3,8 @@ To clone the repo locally:
 git clone https://github.com/rdubsky17/gp-pitch.git
 cd gp-pitch
 ```
+Or download as ZIP and extract into a folder, ensure you are cd'd into it.
+
 Ensure you have nodeJS installed, the download for the installer can be found here: https://nodejs.org/en/download
 
 ## Getting Started
