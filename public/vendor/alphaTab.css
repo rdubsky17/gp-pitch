@@ -1,0 +1,24 @@
+/* Minimal alphaTab CSS: loads Bravura/BravuraText from /public/vendor/font */
+@font-face {
+  font-family: 'Bravura';
+  src: url('/vendor/font/Bravura.woff2') format('woff2'),
+       url('/vendor/font/Bravura.woff') format('woff'),
+       url('/vendor/font/Bravura.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+@font-face {
+  font-family: 'Bravura Text';
+  src: url('/vendor/font/BravuraText.woff2') format('woff2'),
+       url('/vendor/font/BravuraText.woff') format('woff'),
+       url('/vendor/font/BravuraText.otf') format('opentype');
+  font-weight: normal;
+  font-style: normal;
+  font-display: swap;
+}
+
+/* Optional light defaults so notation looks sane */
+.at-wrap { position: relative; }
+.at-content { user-select: none; }
+.at-highlight { background: rgba(255, 230, 150, 0.5); }
