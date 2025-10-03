@@ -2,18 +2,35 @@
 
 import { useEffect, useRef, useState } from 'react';
 
-const hzToMidi = (hz:number) => 69 + 12 * Math.log2(hz / 440);
-const centsErr = (hz:number, midi:number) => (hz <= 0 ? 1e9 : 100 * (hzToMidi(hz) - midi));
+// MIDI/freq helpers
+const hzToMidi = (hz: number) => 69 + 12 * Math.log2(hz / 440);
 
-type Frame = { t:number; ok:boolean; err:number; target:number };
+// Raw cents error (can be > 1200 if octave off)
+const rawCentsErr = (hz: number, midi: number) =>
+  hz <= 0 ? 1e9 : 100 * (hzToMidi(hz) - midi);
+
+// Fold any cents error into [-600, +600)
+//   e.g. +1200 -> 0,  +700 -> -500,  -1300 -> -100
+const fold1200 = (cents: number) => {
+  if (!isFinite(cents)) return 1e9;
+  const m = 1200;
+  return ((cents + 600) % m + m) % m - 600;
+};
+
+// Final cents error we use for scoring (octave-agnostic)
+const centsErr = (hz: number, midi: number) => fold1200(rawCentsErr(hz, midi));
+
+type Frame = { t: number; ok: boolean; err: number; target: number };
 
 export default function usePitchScorer() {
   // live readout for UI
-  const [live, setLive] = useState<{err:number, ok:boolean, target:number|null}>({
-    err:0, ok:false, target:null
+  const [live, setLive] = useState<{ err: number; ok: boolean; target: number | null }>({
+    err: 0,
+    ok: false,
+    target: null,
   });
   // aggregate score
-  const [score, setScore] = useState({ hits:0, total:0 });
+  const [score, setScore] = useState({ hits: 0, total: 0 });
 
   // pending notes for the *current beat*: midi -> remaining count
   const pendingRef = useRef<Map<number, number>>(new Map());
@@ -23,14 +40,14 @@ export default function usePitchScorer() {
   const cooldownRef = useRef<number>(0);
 
   // tuning for stability
-  const tolerance = 25;   // cents
-  const windowSize = 10;  // frames
-  const needOK = 6;       // need at least 6/10 frames within tolerance
-  const cooldownMs = 200; // refractory period after awarding, in ms
+  const tolerance = 25;   // cents window for "in tune"
+  const windowSize = 10;  // frames to consider
+  const needOK = 6;       // need at least 6/10 frames in tune
+  const cooldownMs = 200; // minimal time between awards
 
   useEffect(() => {
     const onExpected = (e: Event) => {
-      const { pitches } = (e as CustomEvent).detail as { tSec:number; pitches:number[] };
+      const { pitches } = (e as CustomEvent).detail as { tSec: number; pitches: number[] };
 
       // Build pending-map (midi -> count) for this beat
       const m = new Map<number, number>();
@@ -40,31 +57,31 @@ export default function usePitchScorer() {
       // Increase TOTAL by #notes in beat
       const notesInBeat = pitches?.length ?? 0;
       if (notesInBeat > 0) {
-        setScore(s => ({ ...s, total: s.total + notesInBeat }));
+        setScore((s) => ({ ...s, total: s.total + notesInBeat }));
       }
 
       // Reset per-beat state
       bufRef.current = [];
       cooldownRef.current = 0;
-      setLive({ err:0, ok:false, target:null });
+      setLive({ err: 0, ok: false, target: null });
     };
 
     const onDetected = (e: Event) => {
-      const { hz } = (e as CustomEvent).detail as { tSec:number; hz:number };
+      const { hz } = (e as CustomEvent).detail as { tSec: number; hz: number };
       const pending = pendingRef.current;
 
-      // Nothing to grade (rests or no expected notes)
       if (!pending || pending.size === 0) {
         bufRef.current = [];
-        setLive({ err:0, ok:false, target:null });
+        setLive({ err: 0, ok: false, target: null });
         return;
       }
 
-      // Choose nearest *still-pending* target
+      // Choose nearest *still-pending* target (octave-agnostic)
       let bestTarget: number | null = null;
       let bestErr = Number.POSITIVE_INFINITY;
+
       for (const midi of pending.keys()) {
-        const ce = Math.abs(centsErr(hz, midi));
+        const ce = Math.abs(centsErr(hz, midi)); // <-- folded into [-600,+600)
         if (ce < bestErr) {
           bestErr = ce;
           bestTarget = midi;
@@ -73,7 +90,7 @@ export default function usePitchScorer() {
 
       if (bestTarget === null || !isFinite(bestErr)) {
         bufRef.current = [];
-        setLive({ err:0, ok:false, target:null });
+        setLive({ err: 0, ok: false, target: null });
         return;
       }
 
@@ -84,22 +101,21 @@ export default function usePitchScorer() {
       bufRef.current.push({ t: now, ok: okNow, err: bestErr, target: bestTarget });
       if (bufRef.current.length > windowSize) bufRef.current.shift();
 
-      // Stability check for *current* target
-      const okCount = bufRef.current.reduce((a,b) => a + (b.ok ? 1 : 0), 0);
+      // Stability over the window
+      const okCount = bufRef.current.reduce((a, b) => a + (b.ok ? 1 : 0), 0);
       const stable = okCount >= needOK;
 
       setLive({ err: bestErr, ok: stable, target: bestTarget });
 
-      // Award logic: one credit at a time, and only for targets still pending
+      // Award one note when we first reach stability for a pending target
       if (stable && now >= cooldownRef.current) {
         const remaining = pending.get(bestTarget) ?? 0;
         if (remaining > 0) {
           pending.set(bestTarget, remaining - 1);
           if (pending.get(bestTarget) === 0) pending.delete(bestTarget);
 
-          setScore(s => ({ ...s, hits: s.hits + 1 }));
+          setScore((s) => ({ ...s, hits: s.hits + 1 }));
 
-          // small cooldown + reset window so the next note requires fresh stability
           cooldownRef.current = now + cooldownMs;
           bufRef.current = [];
         }
