@@ -1,0 +1,137 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --font-sans: var(--font-geist-sans);
+  --font-mono: var(--font-geist-mono);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root {
+    --background: #0a0a0a;
+    --foreground: #ededed;
+  }
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+  font-family: Arial, Helvetica, sans-serif;
+}
+
+/* ---------- alphaTab safety net (forces readable, light paper) ---------- */
+.alphaTabCard {
+  /* lock the score area to light theme, regardless of :root vars */
+  --at-paper: #fff;
+  --at-ink: #111;
+
+  background: var(--at-paper) !important;
+  color: var(--at-ink) !important;
+}
+
+/* ensure all containers inside are also on "paper" */
+.alphaTabCard .at-wrap,
+.alphaTabCard .at-content {
+  background: var(--at-paper) !important;
+  color: var(--at-ink) !important;
+}
+
+/* alphaTab renders SVG; keep the canvas white */
+.alphaTabCard svg {
+  background: var(--at-paper) !important;
+}
+
+/* many builds hardcode black fills/strokes; remap them to our ink color */
+.alphaTabCard svg [stroke="#000"],
+.alphaTabCard svg [stroke="black"] {
+  stroke: var(--at-ink) !important;
+}
+.alphaTabCard svg [fill="#000"],
+.alphaTabCard svg [fill="black"] {
+  fill: var(--at-ink) !important;
+}
+
+/* prevent the “stretched first row” look by containing overflow */
+.alphaTabCard .at-wrap { position: relative; overflow: hidden; }
+.alphaTabCard .at-content { overflow: visible; }
+
+/* keep controls readable on any theme */
+:root { --at-controls-bg: #fff; }
+@media (prefers-color-scheme: dark) {
+  :root { --at-controls-bg: #111; /* control strip only; score stays white */ }
+}
+
+/* bottom ribbon spacer (if you use one) */
+:root { --ribbon-h: 120px; }
+
+/* Optional: alphaTab top controls defaults */
+.at-controls button { color: #fff; }
+.at-controls select {
+  color: #fff;
+  background: #111;
+  border: 1px solid #666;
+}
+.at-controls option { color: #111; /* dropdown list text */ }
+
+/* =======================================================================
+   CURSOR: Consolidated, conflict-free styles (beat line made thicker)
+   ======================================================================= */
+
+/* put the cursor overlay above the SVG; never steal clicks */
+.alphaTabCard .at-cursor,
+.alphaTabCard .at-cursor-bar,
+.alphaTabCard .at-cursor-beat {
+  position: absolute !important;
+  z-index: 40 !important;
+  pointer-events: none !important;
+  mix-blend-mode: normal !important;
+  /* Reduce compositor flicker on some GPUs */
+  will-change: transform, left, top, width, height;
+  transform: translateZ(0);
+}
+
+/* measure/beat group highlight area (light blue wash) */
+.alphaTabCard .at-cursor {
+  background: rgba(30, 144, 255, 0.12) !important;
+  border-radius: 2px;
+}
+
+/* some builds emit a "bar" rect; keep it subtle */
+.alphaTabCard .at-cursor-bar {
+  background: rgba(255, 242, 0, 0.18) !important;
+}
+
+/* the thin moving line — make it chunky enough to stay visible */
+.alphaTabCard .at-cursor-beat {
+  /* enforce consistent thickness regardless of other rules */
+  width: 4px !important;
+  min-width: 4px !important;
+  max-width: 4px !important;
+
+  background: rgba(30, 144, 255, 0.95) !important; /* DodgerBlue */
+  opacity: 1 !important;
+
+  /* subtle outline so it doesn't vanish over ledger lines */
+  box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+}
+
+/* optional: highlight currently played noteheads (SVG renderer only) */
+.alphaTabCard .at-highlight * {
+  fill: #0a7cff !important;
+  stroke: #0a7cff !important;
+}
+
+.alphaTabCard .at-cursor-beat {
+  width: 3px !important;
+  background: rgba(30, 144, 255, 0.95) !important;
+  pointer-events: none !important;
+  /* kill layout-induced flicker on some drivers */
+  backface-visibility: hidden;
+  contain: paint;
+}
