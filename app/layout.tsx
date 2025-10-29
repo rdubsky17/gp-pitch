@@ -14,8 +14,8 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Guitar TABS  - Login",
-  description: "Web-app designed to teach new players important concepts of playing electric/bass guitar, such as rhythm, note length, pitch correctness, and potentially note quality. ",
+  title: "Guitar TABS",
+  description: "Web-app designed to teach new players important concepts of playing electric/bass guitar, such as rhythm, note length, pitch correctness, and potentially note quality.",
 };
 
 export default function RootLayout({
@@ -37,3 +37,4 @@ export default function RootLayout({
     </html>
   );
 }
+
