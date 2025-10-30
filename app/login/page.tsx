@@ -44,6 +44,7 @@ export default function LoginPage() {
         username: data.user.username,
         email: data.user.email,
       });
+      // this opens web app. later change it to no params
       window.location.href = `/dashboard?${params.toString()}`;
     } catch (error) {
       console.error('Login error:', error); // debug in console

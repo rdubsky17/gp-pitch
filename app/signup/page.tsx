@@ -72,7 +72,7 @@ export default function SignUpPage() {
 
       // Success - redirect to login or dashboard
       alert('Account created successfully! Please sign in.');
-      window.location.href = '/';
+      window.location.href = '/login';
     } catch (error) {
       console.error('Signup error:', error);
       setErrors({ submit: 'An error occurred. Please try again.' });
