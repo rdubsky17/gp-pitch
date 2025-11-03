@@ -32,7 +32,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // email and username are not in db
+    // email and username are not in db, create new user
     const saltRounds = 10;
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 

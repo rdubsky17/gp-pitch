@@ -2,17 +2,17 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
-import GuestSignInModal from '@/components/GuestSignInModal'; // later probably remove this and go straight to web app
+import { useRouter } from 'next/navigation';
 
 export default function LoginPage() {
+  const router = useRouter();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [isLoading, setIsLoading] = useState(false);
-  const [showGuestModal, setShowGuestModal] = useState(false);
   const [error, setError] = useState<string>('');
 
   const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault(); // prevent setting default values
+    e.preventDefault(); // prevent default actions
     setError(''); // reset error
     setIsLoading(true); // loading animation
     
@@ -29,10 +29,10 @@ export default function LoginPage() {
         }),
       });
       
-      // what db respond
+      // db response
       const data = await response.json();
 
-      // respond has error
+      // response has error
       if (!response.ok) {
         setError(data.error || 'Login failed');
         setIsLoading(false);
@@ -44,8 +44,8 @@ export default function LoginPage() {
         username: data.user.username,
         email: data.user.email,
       });
-      // this opens web app. later change it to no params
-      window.location.href = `/dashboard?${params.toString()}`;
+      // navigate to dashboard
+      router.push(`/dashboard?${params.toString()}`);
     } catch (error) {
       console.error('Login error:', error); // debug in console
       setError('An error occured. Please try again.');
@@ -201,7 +201,7 @@ export default function LoginPage() {
               <div className="text-center">
                 <button
                   type="button"
-                  onClick={() => setShowGuestModal(true)}
+                  onClick={() => router.push('/dashboard?GuestView=1')}
                   className="w-full py-3 px-4 border border-gray-300 dark:border-gray-600 rounded-lg shadow-sm bg-white dark:bg-gray-800 text-sm font-medium text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-700 transition-colors"
                 >
                   Try as Guest
@@ -211,12 +211,6 @@ export default function LoginPage() {
           </div>
         </div>
       </div>
-      
-      {/* guest sign-in modal from components. this components redirects to web app. will add logic later */}
-      <GuestSignInModal 
-        isOpen={showGuestModal} 
-        onClose={() => setShowGuestModal(false)} 
-      />
     </div>
   );
 }

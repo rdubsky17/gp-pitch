@@ -1,4 +1,4 @@
-import { PrismaClient } from '../app/generated/prisma'; // adjust path to your generated client
+import { PrismaClient } from '../app/generated/prisma';
 
 const prisma = new PrismaClient();
 

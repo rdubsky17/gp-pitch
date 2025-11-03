@@ -70,7 +70,7 @@ export default function SignUpPage() {
         return;
       }
 
-      // Success - redirect to login or dashboard
+      // Success. redirect to login or dashboard
       alert('Account created successfully! Please sign in.');
       window.location.href = '/login';
     } catch (error) {
@@ -115,7 +115,7 @@ export default function SignUpPage() {
       {/* Right Side - Sign Up Form */}
       <div className="w-full lg:w-1/2 flex flex-col justify-center px-8 py-12 lg:px-16">
         <div className="max-w-md mx-auto w-full">
-          {/* Mobile App Branding */}
+          
           <div className="lg:hidden text-center mb-8">
             <h1 className="text-2xl font-bold text-gray-900 dark:text-white">Guitar TABS</h1>
           </div>
