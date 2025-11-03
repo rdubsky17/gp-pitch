@@ -24,7 +24,7 @@ Install MySQL.
 * Run the installer.
 * Use "Typical" setup type.
 * Use default configurations. 
-* Set a root password (write it down)
+* Set a root password (will need this later)
 * After MySQL installed, run mysql CL Client
 * Create a database using "CREATE DATABASE guitar_tabs;" .(you can use any name)
 * Create .env file in the project folder (use example .env.example)
