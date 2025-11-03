@@ -18,6 +18,12 @@ or
 npm install
 ```
 
+Install MySQL. 
+
+Download MySQL Community Server: https://dev.mysql.com/downloads/mysql/
+Run the installer.
+
+
 For now, just run the development server:
 
 ```bash
