@@ -30,11 +30,12 @@ Install MySQL.
 * Create .env file in the project folder (use example .env.example)
 * in .env file add this line (use your mysql root password):
 * * DATABASE_URL="mysql://root:password@localhost:3306/guitar_tabs"
+* * * If this proves difficult, run $env:DATABASE_URL="mysql://root:pass@localhost:3306/guitar_tabs"
 
 * Load prisma configs using “npx prisma generate”
 * Run migrations using “npx prisma migrate dev”
 * Optionally run “npx tsx seed.ts” .This adds admin user with following credentials:
-* * Email: admin@example.com
+* * Email: admin@admin.com
 * * Password: adminadmin
 
 For now, just run the development server:
