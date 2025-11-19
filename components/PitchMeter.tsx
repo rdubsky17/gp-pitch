@@ -1,5 +1,6 @@
 'use client';
 import { useEffect, useRef, useState } from 'react';
+import { useSettings } from '@/components/SettingsContext';
 
 type Method = 'yin' | 'yinfft' | 'mcomb' | 'fcomb' | 'schmitt';
 
@@ -7,9 +8,7 @@ const METHOD_OPTIONS: Method[] = ['yin', 'yinfft', 'mcomb', 'fcomb', 'schmitt'];
 const WIN_OPTIONS = [2048, 4096, 8192];
 const HOP_OPTIONS = [256, 512, 1024, 2048];
 
-type MediaDev = { deviceId: string; label: string };
-
-export default function PitchMeter() {
+export default function PitchMeter({ variant }: { variant?: 'ribbon' | 'full' }) {
   const ctxRef = useRef<AudioContext | null>(null);
   const nodeRef = useRef<AudioWorkletNode | null>(null);
   const micRef = useRef<MediaStreamAudioSourceNode | null>(null);
@@ -18,34 +17,11 @@ export default function PitchMeter() {
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('idle');
   const [freq, setFreq] = useState(0);
-
-  const [method, setMethod] = useState<Method>('yinfft');
-  const [win, setWin] = useState<number>(4096);
-  const [hop, setHop] = useState<number>(1024);
-
-  const [devices, setDevices] = useState<MediaDev[]>([]);
-  const [deviceId, setDeviceId] = useState<string>('');
-  const [channelIndex, setChannelIndex] = useState<number>(0);
+  const { method, setMethod, win, setWin, hop, setHop, devices, deviceId, setDeviceId, channelIndex, setChannelIndex } = useSettings();
 
   const log = (...a: any[]) => console.log('[PitchMeter]', ...a);
 
-  useEffect(() => {
-    (async () => {
-      try { await navigator.mediaDevices.getUserMedia({ audio: true }); } catch {}
-      const all = await navigator.mediaDevices.enumerateDevices();
-      const inputs = all
-        .filter(d => d.kind === 'audioinput')
-        .map(d => ({ deviceId: d.deviceId, label: d.label || 'Audio input' }));
-      setDevices(inputs);
-      if (!deviceId && inputs.length) {
-        const ext = inputs.find(d =>
-          /focusrite|scarlett|behringer|steinberg|m-?audio|usb|interface/i.test(d.label)
-        );
-        setDeviceId((ext ?? inputs[0]).deviceId);
-      }
-    })();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  // devices and defaults come from SettingsContext
 
   useEffect(() => {
     if (hop > win) setHop(win);
@@ -163,82 +139,107 @@ export default function PitchMeter() {
     log('live param change', { method, win, hop: safeHop });
   }, [method, win, hop]);
 
+  // Respond to global start/stop requests and expose status to the app
+  useEffect(() => {
+    const onStart = () => { start().catch(e => log('start failed', e)); };
+    const onStop = () => { stop().catch(e => log('stop failed', e)); };
+    window.addEventListener('start-pitch-meter', onStart as EventListener);
+    window.addEventListener('stop-pitch-meter', onStop as EventListener);
+    return () => {
+      window.removeEventListener('start-pitch-meter', onStart as EventListener);
+      window.removeEventListener('stop-pitch-meter', onStop as EventListener);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
+
+  // Broadcast current pitch-meter status for UI (TopRibbon)
+  useEffect(() => {
+    try {
+      window.dispatchEvent(new CustomEvent('pitch-status', { detail: { running, status, freq } }));
+    } catch (e) {
+      log('failed to dispatch pitch-status', e);
+    }
+  }, [running, status, freq]);
+
   useEffect(() => {
     if (!running) return;
     buildGraph();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [deviceId, channelIndex]);
-
   return (
-    <div style={{ fontFamily: 'system-ui, sans-serif', padding: 16, maxWidth: 900 }}>
-      <h2>Pitch Meter</h2>
+    <div style={{ fontFamily: 'system-ui, sans-serif', padding: variant === 'ribbon' ? 6 : 16, maxWidth: variant === 'ribbon' ? 'auto' : 900 }}>
+      {variant !== 'ribbon' && <h2>Pitch Meter</h2>}
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginBottom: 12 }}>
-        <label>
-          <div>Input Device</div>
-          <select value={deviceId} onChange={e => setDeviceId(e.target.value)}>
-            {devices.map(d => (
-              <option key={d.deviceId} value={d.deviceId} style={{ color: '#111' }}>
-                {d.label}
-              </option>
-            ))}
-          </select>
-        </label>
+      {variant !== 'ribbon' && (
+        <div style={{ marginBottom: 8, opacity: 0.8 }}>
+          SR: {ctxRef.current?.sampleRate ?? '—'} • Method: {method} • Win: {win} • Hop: {Math.min(hop, win)}
+        </div>
+      )}
 
-        <label>
-          <div>Channel</div>
-          <select value={channelIndex} onChange={e => setChannelIndex(parseInt(e.target.value, 10))}>
-            <option value={0} style={{ color: '#111' }}>Ch 1 (Left)</option>
-            <option value={1} style={{ color: '#111' }}>Ch 2 (Right)</option>
-          </select>
-        </label>
-
-        <label>
-          <div>Method</div>
-          <select value={method} onChange={e => setMethod(e.target.value as Method)}>
-            {METHOD_OPTIONS.map(v => (
-              <option key={v} value={v} style={{ color: '#111' }}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <div>Win</div>
-          <select value={win} onChange={e => setWin(parseInt(e.target.value, 10))}>
-            {WIN_OPTIONS.map(v => (
-              <option key={v} value={v} style={{ color: '#111' }}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        <label>
-          <div>Hop</div>
-          <select value={hop} onChange={e => setHop(parseInt(e.target.value, 10))}>
-            {HOP_OPTIONS.map(v => (
-              <option key={v} value={v} style={{ color: '#111' }}>
-                {v}
-              </option>
-            ))}
-          </select>
-        </label>
-      </div>
-
-      <div style={{ marginBottom: 8, opacity: 0.8 }}>
-        SR: {ctxRef.current?.sampleRate ?? '—'} • Method: {method} • Win: {win} • Hop: {Math.min(hop, win)}
-      </div>
-
-      <div style={{ display: 'flex', gap: 12, marginBottom: 8 }}>
+      <div style={{ display: 'flex', gap: 12, alignItems: 'center', marginBottom: 8 }}>
         {!running ? <button onClick={start}>Start</button> : <button onClick={stop}>Stop</button>}
-        <span>{status}</span>
+        <span style={{ opacity: 0.9 }}>{status}</span>
       </div>
 
-      <div style={{ fontSize: 28, fontWeight: 600 }}>
+      <div style={{ fontSize: variant === 'ribbon' ? 18 : 28, fontWeight: 600 }}>
         {freq > 0 ? `${freq.toFixed(1)} Hz` : '—'}
       </div>
+
+      {variant !== 'ribbon' && (
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 12, marginTop: 12 }}>
+          <label>
+            <div>Input Device</div>
+            <select value={deviceId} onChange={e => setDeviceId(e.target.value)}>
+              {devices.map(d => (
+                <option key={d.deviceId} value={d.deviceId} style={{ color: '#111' }}>
+                  {d.label}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <div>Channel</div>
+            <select value={channelIndex} onChange={e => setChannelIndex(parseInt(e.target.value, 10))}>
+              <option value={0} style={{ color: '#111' }}>Ch 1 (Left)</option>
+              <option value={1} style={{ color: '#111' }}>Ch 2 (Right)</option>
+            </select>
+          </label>
+
+          <label>
+            <div>Method</div>
+            <select value={method} onChange={e => setMethod(e.target.value as Method)}>
+              {METHOD_OPTIONS.map(v => (
+                <option key={v} value={v} style={{ color: '#111' }}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <div>Win</div>
+            <select value={win} onChange={e => setWin(parseInt(e.target.value, 10))}>
+              {WIN_OPTIONS.map(v => (
+                <option key={v} value={v} style={{ color: '#111' }}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+
+          <label>
+            <div>Hop</div>
+            <select value={hop} onChange={e => setHop(parseInt(e.target.value, 10))}>
+              {HOP_OPTIONS.map(v => (
+                <option key={v} value={v} style={{ color: '#111' }}>
+                  {v}
+                </option>
+              ))}
+            </select>
+          </label>
+        </div>
+      )}
     </div>
   );
 }

@@ -67,8 +67,7 @@ body {
   :root { --at-controls-bg: #111; /* control strip only; score stays white */ }
 }
 
-/* bottom ribbon spacer (if you use one) */
-:root { --ribbon-h: 120px; }
+
 
 /* Optional: alphaTab top controls defaults */
 .at-controls button { color: #fff; }

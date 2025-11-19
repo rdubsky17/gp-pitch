@@ -9,6 +9,17 @@ type Props = { fileUrl: string };
 type TrackItem = { idx: number; name: string };
 
 export default function TabViewer({ fileUrl }: Props) {
+  const [currentFile, setCurrentFile] = useState<string>(fileUrl);
+  // allow external load requests
+  useEffect(() => {
+    const onLoad = (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      const url = typeof d.url === 'string' ? d.url : d.file;
+      if (typeof url === 'string' && url) setCurrentFile(url);
+    };
+    window.addEventListener('load-song', onLoad as EventListener);
+    return () => window.removeEventListener('load-song', onLoad as EventListener);
+  }, []);
   const hostRef     = useRef<HTMLDivElement | null>(null);   // alphaTab host
   const viewportRef = useRef<HTMLDivElement | null>(null);   // scroll container
   const apiRef      = useRef<any>(null);
@@ -21,6 +32,36 @@ export default function TabViewer({ fileUrl }: Props) {
   const [tracks, setTracks]       = useState<TrackItem[]>([]);
   const [trackIdx, setTrackIdx]   = useState<number | null>(null);
   const [audioOn, setAudioOn]     = useState(false);
+  // Listen for global transport / track / audio events from TopRibbon
+  useEffect(() => {
+    const onPlay = () => handlePlay();
+    const onPause = () => handlePause();
+    const onStop = () => handleStop();
+    const onSelect = (e: Event) => {
+      const d = (e as CustomEvent).detail || {};
+      const idx = typeof d.idx === 'number' ? d.idx : parseInt(String(d.idx || ''), 10);
+      if (!Number.isNaN(idx)) onSelectTrack(String(idx));
+    };
+    const onAudioToggle = (e: Event) => {
+      const on = !!(e as CustomEvent).detail?.on;
+      setAudioOn(on);
+      applyVolume(on);
+    };
+
+    window.addEventListener('play-alpha', onPlay as EventListener);
+    window.addEventListener('pause-alpha', onPause as EventListener);
+    window.addEventListener('stop-alpha', onStop as EventListener);
+    window.addEventListener('select-track', onSelect as EventListener);
+    window.addEventListener('audio-toggle', onAudioToggle as EventListener);
+    return () => {
+      window.removeEventListener('play-alpha', onPlay as EventListener);
+      window.removeEventListener('pause-alpha', onPause as EventListener);
+      window.removeEventListener('stop-alpha', onStop as EventListener);
+      window.removeEventListener('select-track', onSelect as EventListener);
+      window.removeEventListener('audio-toggle', onAudioToggle as EventListener);
+    };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [apiRef.current, tracks]);
 
   // --- NEW: keep the cursor visible in the viewport (Page layout) ---
   const ensureCursorVisible = () => {
@@ -82,9 +123,10 @@ export default function TabViewer({ fileUrl }: Props) {
 
   useEffect(() => {
     if (!hostRef.current || !('alphaTab' in window)) return;
+    const fileToLoad = currentFile;
 
     const api = new alphaTab.AlphaTabApi(hostRef.current, {
-      file: fileUrl,
+      file: fileToLoad,
       display: {
         layoutMode: (alphaTab?.LayoutMode?.Page ?? 0),
         resources: { playCursor: true },
@@ -179,7 +221,10 @@ export default function TabViewer({ fileUrl }: Props) {
       try { api?.destroy?.(); } catch {}
       setTracks([]); setTrackIdx(null); setIsPlaying(false); setReady(false);
     };
-  }, [fileUrl]);
+  }, [currentFile]);
+
+  // keep internal currentFile in sync if parent prop changes
+  useEffect(() => { setCurrentFile(fileUrl); }, [fileUrl]);
 
   const onSelectTrack = (idxStr: string) => {
     const idx = parseInt(idxStr, 10);
@@ -195,112 +240,18 @@ export default function TabViewer({ fileUrl }: Props) {
   const handleStop  = () => { const a = apiRef.current; try { a?.stop?.();  setIsPlaying(false); } catch {} };
 
   const controlsDisabled = !ready || tracks.length === 0;
+  // Broadcast tab status for TopRibbon to consume
+  useEffect(() => {
+    window.dispatchEvent(new CustomEvent('tab-status', { detail: { score, live, isPlaying, tracks, trackIdx } }));
+  }, [score, live, isPlaying, tracks, trackIdx]);
 
   return (
     <div className="alphaTabCard" style={{ display:'grid', gap:12, position:'relative' }}>
-      {/* Header */}
-      <div
-        className="at-controls"
-        style={{
-          display:'grid',
-          gridTemplateColumns:'auto 1fr auto auto',
-          alignItems:'center',
-          columnGap:12,
-          position:'sticky', top:0, zIndex:10,
-          padding:'8px 10px',
-          background:'rgba(0,0,0,0.85)', color:'#fff', borderRadius:8
-        }}
-      >
-        {/* Track select */}
-        <label style={{ display:'flex', flexDirection:'column', gap:4 }}>
-          <span style={{ fontSize:12, opacity:0.9 }}>Track</span>
-          <select
-            value={trackIdx ?? ''}
-            onChange={e => onSelectTrack(e.target.value)}
-            disabled={controlsDisabled}
-            style={{
-              padding:'6px 8px',
-              color:'#fff', background:'#111', border:'1px solid #555', borderRadius:6,
-              cursor: controlsDisabled ? 'not-allowed' : 'pointer'
-            }}
-          >
-            {tracks.length === 0 && <option value="">Loading…</option>}
-            {tracks.map(t => (
-              <option key={t.idx} value={t.idx} style={{ color:'#111' }}>
-                {t.name}
-              </option>
-            ))}
-          </select>
-        </label>
-
-        {/* Score HUD */}
-        <div style={{ display:'flex', gap:16, justifyContent:'center', fontSize:14 }}>
-          <div>
-            <strong>Score:</strong>{' '}
-            <span style={{ fontVariantNumeric:'tabular-nums' }}>
-              {score.hits}/{score.total}
-            </span>
-          </div>
-          <div>
-            <strong>Intonation:</strong>{' '}
-            {live.target !== null
-              ? <span style={{ fontVariantNumeric:'tabular-nums' }}>
-                  {Math.round(live.err)} cents {live.ok ? '✅' : '❌'}
-                </span>
-              : '—'}
-          </div>
-        </div>
-
-        {/* Transport */}
-        <div style={{ display:'flex', gap:8, justifySelf:'end' }}>
-          <button type="button" onClick={handlePlay}
-            disabled={controlsDisabled || isPlaying}
-            style={{
-              padding:'6px 10px', border:'1px solid #666', borderRadius:6,
-              background:'transparent', color:'#fff',
-              cursor: (controlsDisabled || isPlaying) ? 'not-allowed' : 'pointer',
-              opacity: (controlsDisabled || isPlaying) ? 0.5 : 1
-            }}>
-            Play
-          </button>
-          <button type="button" onClick={handlePause}
-            disabled={controlsDisabled || !isPlaying}
-            style={{
-              padding:'6px 10px', border:'1px solid #666', borderRadius:6,
-              background:'transparent', color:'#fff',
-              cursor: (controlsDisabled || !isPlaying) ? 'not-allowed' : 'pointer',
-              opacity: (controlsDisabled || !isPlaying) ? 0.5 : 1
-            }}>
-            Pause
-          </button>
-          <button type="button" onClick={handleStop}
-            disabled={controlsDisabled}
-            style={{
-              padding:'6px 10px', border:'1px solid #666', borderRadius:6,
-              background:'transparent', color:'#fff',
-              cursor: controlsDisabled ? 'not-allowed' : 'pointer',
-              opacity: controlsDisabled ? 0.5 : 1
-            }}>
-            Stop
-          </button>
-        </div>
-
-        {/* Audio toggle */}
-        <label style={{ display:'flex', alignItems:'center', gap:6, justifySelf:'end' }}>
-          <input
-            type="checkbox"
-            checked={audioOn}
-            onChange={e => { setAudioOn(e.target.checked); applyVolume(e.target.checked); }}
-          />
-          <span>Audio</span>
-        </label>
-      </div>
-
-      {/* Viewport (multi-row Page layout) */}
+      {/* Viewport only — header moved to TopRibbon (merged UI) */}
       <div
         ref={viewportRef}
         className="at-viewport"
-        style={{ position:'relative', overflow:'auto', borderRadius:8, maxHeight:'70vh' }}
+        style={{ position:'relative', overflow:'auto', borderRadius:4, maxHeight:'89vh' }}
       >
         <div ref={hostRef} />
       </div>
