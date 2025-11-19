@@ -5,8 +5,7 @@ import SettingsPanel from './SettingsPanel';
 
 export default function TopRibbon() {
   const pathname = usePathname();
-  // hide the global ribbon on the login page
-  if (pathname === '/login') return null;
+  const hideOnLogin = pathname === '/login';
 
   const [showSettings, setShowSettings] = useState(false);
   const [showTracks, setShowTracks] = useState(false);
@@ -26,6 +25,7 @@ export default function TopRibbon() {
 
   // Listen for pitch status events from PitchMeter
   useEffect(() => {
+    if (hideOnLogin) return;
     const onStatus = (e: Event) => {
       const d = (e as CustomEvent).detail || {};
       setRunning(Boolean(d.running));
@@ -61,6 +61,8 @@ export default function TopRibbon() {
   }, []);
 
   useEffect(() => {
+    if (hideOnLogin) return;
+
     function onDoc(e: MouseEvent) {
       if (!ref.current) return;
       if (!ref.current.contains(e.target as Node)) setShowSettings(false);
@@ -68,6 +70,9 @@ export default function TopRibbon() {
     document.addEventListener('click', onDoc);
     return () => document.removeEventListener('click', onDoc);
   }, []);
+
+  // If we're on the login page, don't render anything (hooks ran but effects were noop)
+  if (hideOnLogin) return null;
 
   return (
     <>
