@@ -130,5 +130,23 @@ export default function usePitchScorer() {
     };
   }, []);
 
+  // Reset live/score when playback stops or a new song is loaded
+  useEffect(() => {
+    const resetAll = () => {
+      pendingRef.current = new Map();
+      bufRef.current = [];
+      cooldownRef.current = 0;
+      setLive({ err: 0, ok: false, target: null });
+      setScore({ hits: 0, total: 0 });
+    };
+
+    window.addEventListener('stop-alpha', resetAll as EventListener);
+    window.addEventListener('load-song', resetAll as EventListener);
+    return () => {
+      window.removeEventListener('stop-alpha', resetAll as EventListener);
+      window.removeEventListener('load-song', resetAll as EventListener);
+    };
+  }, []);
+
   return { live, score };
 }

@@ -251,7 +251,7 @@ export default function TabViewer({ fileUrl }: Props) {
       <div
         ref={viewportRef}
         className="at-viewport"
-        style={{ position:'relative', overflow:'auto', borderRadius:4, maxHeight:'89vh' }}
+        style={{ position:'relative', overflow:'auto', borderRadius:4, maxHeight:'91vh' }}
       >
         <div ref={hostRef} />
       </div>

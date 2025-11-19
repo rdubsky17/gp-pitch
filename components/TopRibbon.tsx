@@ -78,7 +78,7 @@ export default function TopRibbon() {
 
           {/* Song selection button */}
           <div style={{ position: 'relative' }}>
-            <button onClick={() => setShowTracks(v => !v)} style={{ padding: '6px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', fontSize: 13 }}>Songs</button>
+            <button onClick={() => setShowTracks(v => !v)} style={{ padding: '6px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(197, 18, 18, 0.06)', fontSize: 13 }}>Song Selection</button>
             {showTracks && (
               <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 8px)', background: '#fff', color: '#111', borderRadius: 6, boxShadow: '0 6px 18px rgba(0,0,0,0.15)', minWidth: 300 }}>
                 <div style={{ padding: 10 }}>
@@ -96,7 +96,7 @@ export default function TopRibbon() {
 
           {/* Instrument selection (smaller) */}
           <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ fontSize: 12, opacity: 0.85 }}>Instrument</div>
+            <div style={{ fontSize: 13 }}>Instrument:</div>
             <select
               value={currentTrack ?? ''}
               onChange={e => {
