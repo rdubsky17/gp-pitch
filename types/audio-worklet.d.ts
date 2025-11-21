@@ -1,5 +1,5 @@
 // Allow TS to know about the worklet globals without installing extra types.
-declare var sampleRate: number;
+declare const sampleRate: number;
 
 interface PitchMessage {
   type: 'ready' | 'error' | 'pitch' | 'params-applied';

@@ -1,0 +1,8 @@
+app/generated/
+public/vendor/
+public/**/*.js
+.next/
+node_modules/
+data/
+dev.db
+.DS_Store

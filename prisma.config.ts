@@ -8,6 +8,7 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    url: env("DATABASE_URL"),
+    // fall back to a local sqlite file if DATABASE_URL is not provided
+    url: env("DATABASE_URL") || "file:./dev.db",
   },
 });

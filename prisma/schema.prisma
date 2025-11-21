@@ -4,13 +4,17 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "sqlite"
+  // default to a local file `./dev.db` when DATABASE_URL is not set
+  // Prisma's `env()` only accepts a single string parameter. Use the
+  // environment variable here and provide a fallback via your local
+  // `.env` file or programmatic config (e.g. prisma.config.ts).
   url      = env("DATABASE_URL")
 }
 
 model users {
   id       Int      @id @default(autoincrement())
-  username String   @db.VarChar(100)
-  email    String   @unique @db.VarChar(100)
-  password String   @db.VarChar(100)
+  username String
+  email    String   @unique
+  password String
 }
