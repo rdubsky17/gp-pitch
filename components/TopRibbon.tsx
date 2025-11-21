@@ -24,6 +24,7 @@ export default function TopRibbon() {
   const [songs, setSongs] = useState<Array<{ name: string; file: string }>>([]);
 
   // Listen for pitch status events from PitchMeter
+  // Re-run when `hideOnLogin` changes so listeners are attached after navigation
   useEffect(() => {
     if (hideOnLogin) return;
     const onStatus = (e: Event) => {
@@ -58,7 +59,7 @@ export default function TopRibbon() {
       window.removeEventListener('pitch-status', onStatus as EventListener);
       window.removeEventListener('tab-status', onTab as EventListener);
     };
-  }, []);
+  }, [hideOnLogin]);
 
   useEffect(() => {
     if (hideOnLogin) return;
@@ -69,7 +70,7 @@ export default function TopRibbon() {
     }
     document.addEventListener('click', onDoc);
     return () => document.removeEventListener('click', onDoc);
-  }, []);
+  }, [hideOnLogin]);
 
   // If we're on the login page, don't render anything (hooks ran but effects were noop)
   if (hideOnLogin) return null;
