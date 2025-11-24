@@ -10,7 +10,7 @@
   },
   "dependencies": {
     "@coderline/alphatab": "^1.6.3",
-    "@prisma/client": "^6.18.0",
+    "@prisma/client": "^6.19.0",
     "bcryptjs": "^3.0.2",
     "dotenv": "^17.2.3",
     "next": "15.5.4",
@@ -20,12 +20,12 @@
   "devDependencies": {
     "@eslint/eslintrc": "^3",
     "@tailwindcss/postcss": "^4",
-    "@types/node": "^20",
+    "@types/node": "^20.19.25",
     "@types/react": "^19",
     "@types/react-dom": "^19",
     "eslint": "^9",
     "eslint-config-next": "15.5.4",
-    "prisma": "^6.18.0",
+    "prisma": "^6.19.0",
     "tailwindcss": "^4",
     "tsx": "^4.20.6",
     "typescript": "^5"

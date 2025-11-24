@@ -8,7 +8,8 @@ export default defineConfig({
   },
   engine: "classic",
   datasource: {
-    // fall back to a local sqlite file if DATABASE_URL is not provided
-    url: env("DATABASE_URL") || "file:./dev.db",
+    // fall back to SQLite database if DATABASE_URL is not provided
+    // Path is relative to the schema file location (prisma/ directory)
+    url: env("DATABASE_URL") || "file:./data/database.db",
   },
 });
