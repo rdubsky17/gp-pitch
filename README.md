@@ -18,7 +18,7 @@ or
 npm install
 ```
 
-Install MySQL. 
+Database Setup (SQLite):
 
 * Download MySQL Community Server: https://dev.mysql.com/downloads/mysql/ . 9.5 version should work.
 * Run the installer.
