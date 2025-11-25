@@ -20,18 +20,6 @@ npm install
 
 Database Setup (SQLite):
 
-* Download MySQL Community Server: https://dev.mysql.com/downloads/mysql/ . 9.5 version should work.
-* Run the installer.
-* Use "Typical" setup type.
-* Use default configurations. 
-* Set a root password (will need this later)
-* After MySQL installed, run mysql CL Client
-* Create a database using "CREATE DATABASE guitar_tabs;" .(you can use any name)
-* Create .env file in the project folder (use example .env.example)
-* in .env file add this line (use your mysql root password):
-* * DATABASE_URL="mysql://root:password@localhost:3306/guitar_tabs"
-* * * If this proves difficult, run $env:DATABASE_URL="mysql://root:pass@localhost:3306/guitar_tabs"
-
 * Load prisma configs using “npx prisma generate”
 * Run migrations using “npx prisma migrate dev”
 * Optionally run “npx tsx seed.ts” .This adds admin user with following credentials:
