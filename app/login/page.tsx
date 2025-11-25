@@ -39,13 +39,9 @@ export default function LoginPage() {
         return;
       }
 
-      // if success
-      const params = new URLSearchParams({
-        username: data.user.username,
-        email: data.user.email,
-      });
+      // if success - cookie is set automatically by the API
       // navigate to dashboard
-      router.push(`/dashboard?${params.toString()}`);
+      router.push('/dashboard');
     } catch (error) {
       console.error('Login error:', error); // debug in console
       setError('An error occured. Please try again.');

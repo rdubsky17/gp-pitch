@@ -1,6 +1,7 @@
 import { NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import prisma from '@/lib/prismaClient';
+import { signToken } from '@/lib/jwt';
 
 export async function POST(request: Request) {
   try {
@@ -36,8 +37,15 @@ export async function POST(request: Request) {
       );
     }
 
-    // Success. return user data (without password)
-    return NextResponse.json(
+    // Create JWT token
+    const token = await signToken({
+      userId: user.id,
+      username: user.username,
+      email: user.email,
+    });
+
+    // Create response with user data
+    const response = NextResponse.json(
       {
         message: 'Login successful',
         user: {
@@ -48,6 +56,18 @@ export async function POST(request: Request) {
       },
       { status: 200 }
     );
+
+    // Set HTTP-only cookie with JWT token
+    response.cookies.set('auth-token', token, {
+      httpOnly: true,
+      secure: process.env.NODE_ENV === 'production',
+      sameSite: 'lax',
+      maxAge: 60 * 60 * 24 * 7, // 7 days
+      path: '/',
+    });
+
+    return response;
+    
   } catch (error) {
     console.error('Login error:', error);
     return NextResponse.json(
