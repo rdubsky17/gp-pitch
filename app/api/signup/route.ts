@@ -41,14 +41,17 @@ export async function POST(request: Request) {
 		select: {id: true, username: true, email: true}
 	});
 
-    // Success. return user data (without password)
-    return NextResponse.json(
+    // Create response with user data
+    const response = NextResponse.json(
       {
         message: 'User created successful',
         user: newUser
       },
       { status: 201 }
     );
+
+    return response;
+    
   } catch (error) {
     console.error('Signup error:', error);
     return NextResponse.json(
