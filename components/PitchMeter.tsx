@@ -1,6 +1,6 @@
 'use client';
-import { useSettings } from '@/components/SettingsContext';
 import { useEffect, useRef, useState } from 'react';
+import { useSettings } from '@/components/SettingsContext';
 
 type Method = 'yin' | 'yinfft' | 'mcomb' | 'fcomb' | 'schmitt';
 
