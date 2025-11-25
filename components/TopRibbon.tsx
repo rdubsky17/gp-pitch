@@ -5,7 +5,7 @@ import SettingsPanel from './SettingsPanel';
 
 export default function TopRibbon() {
   const pathname = usePathname();
-  const hideOnLogin = pathname === '/login';
+  const hideOnLogin = pathname === '/login' || pathname === '/signup';
 
   const [showSettings, setShowSettings] = useState(false);
   const [showTracks, setShowTracks] = useState(false);
