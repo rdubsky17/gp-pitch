@@ -38,9 +38,9 @@ export async function POST(request: Request) {
     }
 
     // If rememberMe is true: 7 days, otherwise: 1 day (session-like)
-    const tokenExpiration = rememberMe ? '30d' : '1d';
+    const tokenExpiration = rememberMe ? '7d' : '1d';
     const cookieMaxAge = rememberMe 
-      ? 60 * 60 * 24 * 30  // 30 days
+      ? 60 * 60 * 24 * 7  // 7 days
       : 60 * 60 * 24;      // 1 day
 
     // Create JWT token with appropriate expiration
