@@ -7,7 +7,7 @@ export async function POST(request: Request) {
     const { username, email, password } = await request.json();
 
     // check if this email exists in db
-    const existing_email = await prisma.users.findUnique({
+    const existing_email = await prisma.user.findUnique({
       where: { email },
       select: { id: true },
     });
@@ -20,7 +20,7 @@ export async function POST(request: Request) {
     }
 
     // check if this username exists in db (username is not unique in schema)
-    const existing_username = await prisma.users.findFirst({
+    const existing_username = await prisma.user.findFirst({
       where: { username },
       select: { id: true },
     });
@@ -33,10 +33,10 @@ export async function POST(request: Request) {
     }
 
     // email and username are not in db, create new user
-    const saltRounds = 10;
+    const saltRounds = 10; // salt rounds for bcrypt
     const hashedPassword = await bcrypt.hash(password, saltRounds);
 
-    const newUser = await prisma.users.create({
+    const newUser = await prisma.user.create({
         data: {email: email, username: username, password: hashedPassword},
 		select: {id: true, username: true, email: true}
 	});
