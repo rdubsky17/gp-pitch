@@ -10,9 +10,44 @@ datasource db {
   url      = "file:./data/database.db"
 }
 
-model users {
-  id       Int      @id @default(autoincrement())
-  username String
-  email    String   @unique
-  password String
+model User {
+  id          Int      @id @default(autoincrement())
+  username    String
+  email       String   @unique
+  password    String
+  createdAt   DateTime @default(now())
+
+  Uploads     UserTracks[]
+  scores      Score[]
 }
+
+model Track {
+  id          Int       @id @default(autoincrement())
+  songName    String   
+  artist      String
+  uploadedAt  DateTime  @default(now())
+
+  Uploads     UserTracks[]
+  scores      Score[]
+}
+
+model Score {
+  id            Int      @id @default(autoincrement())
+  userId        Int
+  trackId       Int
+  createdAt     DateTime @default(now())
+  instrument    String
+  value         Int
+
+  user          User   @relation(fields: [userId], references: [id])
+  track         Track  @relation(fields: [trackId], references: [id])
+}
+
+model UserTracks {
+  id           Int      @id
+  userId       Int
+  trackId      Int
+
+  user         User   @relation(fields: [userId], references: [id])
+  track        Track  @relation(fields: [trackId], references: [id])
+} 
