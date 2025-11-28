@@ -5,7 +5,7 @@ import { signToken } from '@/lib/jwt';
 
 export async function POST(request: Request) {
   try {
-    const { email, password } = await request.json();
+    const { email, password, rememberMe } = await request.json();
     // Validate input
     if (!email || !password) {
       return NextResponse.json(
@@ -37,12 +37,18 @@ export async function POST(request: Request) {
       );
     }
 
-    // Create JWT token
+    // If rememberMe is true: 7 days, otherwise: 1 day (session-like)
+    const tokenExpiration = rememberMe ? '30d' : '1d';
+    const cookieMaxAge = rememberMe 
+      ? 60 * 60 * 24 * 30  // 30 days
+      : 60 * 60 * 24;      // 1 day
+
+    // Create JWT token with appropriate expiration
     const token = await signToken({
       userId: user.id,
       username: user.username,
       email: user.email,
-    });
+    }, tokenExpiration);
 
     // Create response with user data
     const response = NextResponse.json(
@@ -62,7 +68,7 @@ export async function POST(request: Request) {
       httpOnly: true,
       secure: process.env.NODE_ENV === 'production',
       sameSite: 'lax',
-      maxAge: 60 * 60 * 24 * 7, // 7 days
+      maxAge: cookieMaxAge,
       path: '/',
     });
 
