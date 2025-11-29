@@ -11,11 +11,14 @@ export interface JWTPayload {
 }
 
 // sign token with payload
-export async function signToken(payload: Record<string, unknown> & JWTPayload): Promise<string> {
+export async function signToken(
+  payload: Record<string, unknown> & JWTPayload,
+  expirationTime: string = '7d' // Default to 7 days
+): Promise<string> {
   const token = await new SignJWT(payload)
     .setProtectedHeader({ alg: 'HS256' })
     .setIssuedAt()
-    .setExpirationTime('7d') // Token expires in 7 days
+    .setExpirationTime(expirationTime)
     .sign(encodedKey);
 
   return token;

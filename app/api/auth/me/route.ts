@@ -26,7 +26,7 @@ export async function GET() {
     }
 
     // Optionally fetch fresh user data from database
-    const user = await prisma.users.findUnique({
+    const user = await prisma.user.findUnique({
       where: { id: payload.userId },
       select: { id: true, username: true, email: true },
     });
