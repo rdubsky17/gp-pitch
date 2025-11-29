@@ -6,7 +6,7 @@ import ProfilePanel from './ProfilePanel';
 
 export default function TopRibbon() {
   const pathname = usePathname();
-  const hideOnLogin = pathname === '/login' || pathname === '/signup';
+  const hideOnLogin = pathname === '/login' || pathname === '/signup' || pathname === '/reset-password';
 
   const [showSettings, setShowSettings] = useState(false);
   const [showTracks, setShowTracks] = useState(false);
