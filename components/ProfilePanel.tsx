@@ -1,6 +1,7 @@
 'use client';
 import React from 'react';
 import { useAuth } from '@/hooks/useAuth';
+import Link from 'next/link';
 
 export default function ProfilePanel() {
   const { user, loading, logout } = useAuth();
@@ -34,7 +35,24 @@ export default function ProfilePanel() {
           </button>
         </div>
       ) : (
-        <p>Not logged in</p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+              <div>Guest Mode</div>
+              <p>You're viewing as a guest. Sign in to save scores, track progress, and access all features.</p>
+
+              <Link
+                href="/login"
+                style={{
+                  flex: 1,
+                  padding: '8px 12px',
+                  color: 'blue',
+                  textAlign: 'center',
+                  fontSize: 13
+                }}
+              >
+                Sign In
+              </Link>
+            </div>
+
       )}
     </div>
   );
