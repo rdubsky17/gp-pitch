@@ -37,8 +37,7 @@ export default function ProfilePanel() {
       ) : (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
               <div>Guest Mode</div>
-              <p>You're viewing as a guest. Sign in to save scores, track progress, and access all features.</p>
-
+              <p>{"You're viewing as a guest. Sign in to save scores, track progress, and access all features."}</p>
               <Link
                 href="/login"
                 style={{
