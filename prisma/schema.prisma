@@ -7,7 +7,7 @@ datasource db {
   provider = "sqlite"
   // The prisma.config.ts will override this if DATABASE_URL is provided
   // Path is relative to this schema file location (prisma/ directory)
-  url      = "file:./data/database.db"
+  url      = env("DATABASE_URL")
 }
 
 model User {
