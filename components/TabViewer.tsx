@@ -25,7 +25,7 @@ export default function TabViewer({ fileUrl }: Props) {
   const apiRef      = useRef<any>(null);
   const trackIdxRef = useRef<number | null>(null);
 
-  const { live, score } = usePitchScorer();
+  const { live, score, validity, validityRef, scoreRef } = usePitchScorer();
 
   const [ready, setReady]         = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -187,6 +187,30 @@ export default function TabViewer({ fileUrl }: Props) {
       const code = typeof st === 'number' ? st : (st?.state ?? st?.playerState ?? st);
       const playing = code === 1 || code === 'Playing' || code === 'playing';
       setIsPlaying(!!playing);
+    });
+
+    // Detect when song finishes naturally (not stopped manually)
+    api.playerFinished?.on?.(() => {
+      // Get current track name
+      const currentTrack = tracks.find(t => t.idx === trackIdx);
+      const trackName = currentTrack?.name || 'Unknown';
+
+      // Emit basic event for backward compatibility
+      window.dispatchEvent(new CustomEvent('song-finished'));
+
+      // Use refs to get latest values (avoid closure staleness)
+      const latestScore = scoreRef?.current || score;
+      const latestValidity = validityRef?.current || validity;
+
+      // Emit enriched event with all data needed for saving
+      window.dispatchEvent(new CustomEvent('song-finished-with-data', {
+        detail: {
+          score: latestScore,
+          validity: latestValidity,
+          currentFile,
+          trackName,
+        }
+      }));
     });
 
     // --- Emit expected notes AND keep cursor in view ---

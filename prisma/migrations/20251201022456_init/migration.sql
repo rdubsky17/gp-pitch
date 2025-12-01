@@ -1,14 +1,3 @@
-/*
-  Warnings:
-
-  - You are about to drop the `users` table. If the table is not empty, all the data it contains will be lost.
-
-*/
--- DropTable
-PRAGMA foreign_keys=off;
-DROP TABLE "users";
-PRAGMA foreign_keys=on;
-
 -- CreateTable
 CREATE TABLE "User" (
     "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
@@ -34,6 +23,9 @@ CREATE TABLE "Score" (
     "createdAt" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "instrument" TEXT NOT NULL,
     "value" INTEGER NOT NULL,
+    "hits" INTEGER NOT NULL,
+    "total" INTEGER NOT NULL,
+    "duration" REAL,
     CONSTRAINT "Score_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User" ("id") ON DELETE RESTRICT ON UPDATE CASCADE,
     CONSTRAINT "Score_trackId_fkey" FOREIGN KEY ("trackId") REFERENCES "Track" ("id") ON DELETE RESTRICT ON UPDATE CASCADE
 );
@@ -49,3 +41,9 @@ CREATE TABLE "UserTracks" (
 
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
+
+-- CreateIndex
+CREATE INDEX "Score_userId_trackId_idx" ON "Score"("userId", "trackId");
+
+-- CreateIndex
+CREATE INDEX "Score_trackId_value_idx" ON "Score"("trackId", "value");

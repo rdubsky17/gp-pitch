@@ -37,10 +37,17 @@ model Score {
   trackId       Int
   createdAt     DateTime @default(now())
   instrument    String
-  value         Int
+  value         Int      // percentage score (0-100)
+  
+  // Detailed scoring metadata
+  hits          Int      // notes hit correctly
+  total         Int      // total notes in song
 
   user          User   @relation(fields: [userId], references: [id])
   track         Track  @relation(fields: [trackId], references: [id])
+  
+  @@index([userId, trackId])
+  @@index([trackId, value])
 }
 
 model UserTracks {

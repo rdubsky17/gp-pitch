@@ -32,6 +32,26 @@ export default function usePitchScorer() {
   // aggregate score
   const [score, setScore] = useState({ hits: 0, total: 0 });
 
+  // validity tracking for database persistence
+  const [validity, setValidity] = useState({
+    started: false,
+    paused: false,
+    trackChanged: false,
+    manualStop: false,
+  });
+  
+  // Use refs to ensure we always have latest values in event handlers
+  const validityRef = useRef(validity);
+  const scoreRef = useRef(score);
+  
+  useEffect(() => {
+    validityRef.current = validity;
+  }, [validity]);
+  
+  useEffect(() => {
+    scoreRef.current = score;
+  }, [score]);
+
   // pending notes for the *current beat*: midi -> remaining count
   const pendingRef = useRef<Map<number, number>>(new Map());
   // sliding window of recent detection frames
@@ -53,6 +73,12 @@ export default function usePitchScorer() {
       const m = new Map<number, number>();
       (pitches ?? []).forEach((p) => m.set(p, (m.get(p) ?? 0) + 1));
       pendingRef.current = m;
+
+      // Mark as started when first beat arrives (playback has begun)
+      if (!validity.started && pitches && pitches.length > 0) {
+        console.log('[usePitchScorer] Setting started=true, first beat detected');
+        setValidity((v) => ({ ...v, started: true }));
+      }
 
       // Increase TOTAL by #notes in beat
       const notesInBeat = pitches?.length ?? 0;
@@ -128,7 +154,7 @@ export default function usePitchScorer() {
       window.removeEventListener('tab-expected', onExpected as any);
       window.removeEventListener('pitch-detected', onDetected as any);
     };
-  }, []);
+  }, [validity.started]);
 
   // Reset live/score when playback stops or a new song is loaded
   useEffect(() => {
@@ -138,6 +164,7 @@ export default function usePitchScorer() {
       cooldownRef.current = 0;
       setLive({ err: 0, ok: false, target: null });
       setScore({ hits: 0, total: 0 });
+      setValidity({ started: false, paused: false, trackChanged: false, manualStop: false });
     };
 
     window.addEventListener('stop-alpha', resetAll as EventListener);
@@ -148,5 +175,22 @@ export default function usePitchScorer() {
     };
   }, []);
 
-  return { live, score };
+  // Track validity events
+  useEffect(() => {
+    const onPause = () => setValidity((v) => ({ ...v, paused: true }));
+    const onStop = () => setValidity((v) => ({ ...v, manualStop: true }));
+    const onTrackChange = () => setValidity((v) => ({ ...v, trackChanged: true }));
+
+    window.addEventListener('pause-alpha', onPause as EventListener);
+    window.addEventListener('stop-alpha', onStop as EventListener);
+    window.addEventListener('select-track', onTrackChange as EventListener);
+
+    return () => {
+      window.removeEventListener('pause-alpha', onPause as EventListener);
+      window.removeEventListener('stop-alpha', onStop as EventListener);
+      window.removeEventListener('select-track', onTrackChange as EventListener);
+    };
+  }, []);
+
+  return { live, score, validity, validityRef, scoreRef };
 }

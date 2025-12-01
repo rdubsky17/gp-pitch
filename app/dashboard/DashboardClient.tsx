@@ -1,10 +1,15 @@
 'use client';
 
 import TabViewer from '@/components/TabViewer';
+import ScoreSavedToast from '@/components/ScoreSavedToast';
 import { useGuestMode } from '@/hooks/useGuestMode';
+import { useScoreSaver } from '@/hooks/useScoreSaver';
 
 export default function DashboardClient() {
   const { isGuestMode } = useGuestMode();
+  
+  // Initialize score saving hook
+  useScoreSaver();
 
   return (
     <main style={{ display: 'grid', gap: 16, padding: 16 }}>
@@ -19,6 +24,7 @@ export default function DashboardClient() {
       )}
 
       <TabViewer fileUrl="/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp" />
+      <ScoreSavedToast />
     </main>
   );
 }
