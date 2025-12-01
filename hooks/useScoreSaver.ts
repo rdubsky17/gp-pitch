@@ -9,9 +9,11 @@ interface SaveScoreParams {
     paused: boolean;
     trackChanged: boolean;
     manualStop: boolean;
+    seeked: boolean;
   };
   currentFile: string;
   trackName: string;
+  songName: string;
 }
 
 export function useScoreSaver() {
@@ -26,14 +28,15 @@ export function useScoreSaver() {
         return;
       }
 
-      const { score, validity, currentFile, trackName } = detail;
+      const { score, validity, currentFile, trackName, songName } = detail;
 
-      // Check if play was valid (no pauses, stops, or track changes)
+      // Check if play was valid (no pauses, stops, seeks, or track changes)
       const isValid =
         validity.started &&
         !validity.paused &&
         !validity.trackChanged &&
-        !validity.manualStop;
+        !validity.manualStop &&
+        !validity.seeked;
 
       if (!isValid) {
         console.log('[useScoreSaver] Play session was invalid, not saving:', validity);
@@ -64,25 +67,41 @@ export function useScoreSaver() {
       }
       lastSaveRef.current = now;
 
-      // Save to database
-      try {
-        console.log('[useScoreSaver] Saving score:', {
-          trackId,
-          instrument: trackName,
-          value: percentage,
-          hits: score.hits,
-          total: score.total,
-        });
+      // Dispatch event to show modal with score data
+      window.dispatchEvent(
+        new CustomEvent('score-ready-to-save', {
+          detail: {
+            percentage,
+            hits: score.hits,
+            total: score.total,
+            songName,
+            instrument: trackName,
+            trackId,
+          },
+        })
+      );
+    };
 
+    const handleConfirmSave = async (e: Event) => {
+      const data = (e as CustomEvent).detail as {
+        percentage: number;
+        hits: number;
+        total: number;
+        songName: string;
+        instrument: string;
+        trackId: number;
+      };
+
+      try {
         const response = await fetch('/api/scores', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            trackId,
-            instrument: trackName,
-            value: percentage,
-            hits: score.hits,
-            total: score.total,
+            trackId: data.trackId,
+            instrument: data.instrument,
+            value: data.percentage,
+            hits: data.hits,
+            total: data.total,
           }),
         });
 
@@ -94,19 +113,17 @@ export function useScoreSaver() {
 
         const result = await response.json();
         console.log('[useScoreSaver] Score saved successfully:', result);
-
-        // Dispatch success event for UI feedback
-        window.dispatchEvent(
-          new CustomEvent('score-saved', {
-            detail: { score: result.score, percentage },
-          })
-        );
       } catch (error) {
         console.error('[useScoreSaver] Error saving score:', error);
       }
     };
 
     window.addEventListener('song-finished-with-data', handleSongFinished as EventListener);
+    window.addEventListener('confirm-save-score', handleConfirmSave as EventListener);
+    return () => {
+      window.removeEventListener('song-finished-with-data', handleSongFinished as EventListener);
+      window.removeEventListener('confirm-save-score', handleConfirmSave as EventListener);
+    };
     return () => {
       window.removeEventListener('song-finished-with-data', handleSongFinished as EventListener);
     };

@@ -191,9 +191,43 @@ export default function TabViewer({ fileUrl }: Props) {
 
     // Detect when song finishes naturally (not stopped manually)
     api.playerFinished?.on?.(() => {
-      // Get current track name
-      const currentTrack = tracks.find(t => t.idx === trackIdx);
-      const trackName = currentTrack?.name || 'Unknown';
+      // Get the actual rendered track from the API
+      let instrumentName = 'Unknown Instrument';
+      
+      try {
+        // Method 1: Check api.settings.display.tracks (what we told it to render)
+        if (api.settings?.display?.tracks && api.settings.display.tracks.length > 0) {
+          const renderedTrack = api.settings.display.tracks[0];
+          instrumentName = renderedTrack?.name || 'Unknown Instrument';
+        }
+        // Method 2: Use the trackIdx state variable
+        else if (trackIdx !== null && api.score?.tracks) {
+          const track = api.score.tracks[trackIdx];
+          instrumentName = track?.name || 'Unknown Instrument';
+        }
+        // Method 3: Use trackIdxRef (fallback)
+        else if (trackIdxRef.current !== null && api.score?.tracks) {
+          const track = api.score.tracks[trackIdxRef.current];
+          instrumentName = track?.name || 'Unknown Instrument';
+        }
+        // Method 4: Last resort - just get first track
+        else if (api.score?.tracks && api.score.tracks.length > 0) {
+          instrumentName = api.score.tracks[0]?.name || 'Unknown Instrument';
+        }
+      } catch (e) {
+        console.error('[TabViewer] Error getting track:', e);
+      }
+
+      // Get song name from filename
+      const songNameMap: Record<string, string> = {
+        '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 'Feel Good Inc.',
+        '/songs/Muse-Hysteria-09-20-2025.gp': 'Hysteria',
+        '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 'Aeroplane',
+        '/songs/Travis Scott-Sicko Mode-12-11-2024.gp': 'SICKO MODE',
+        '/songs/Fortnite-OG Lobby Theme-12-07-2024.gp': 'OG Lobby Theme',
+        '/songs/DaBaby feat. Roddy Ricch-Rockstar-08-01-2025.gp': 'Rockstar',
+      };
+      const songName = songNameMap[currentFile] || 'Unknown Song';
 
       // Emit basic event for backward compatibility
       window.dispatchEvent(new CustomEvent('song-finished'));
@@ -208,7 +242,8 @@ export default function TabViewer({ fileUrl }: Props) {
           score: latestScore,
           validity: latestValidity,
           currentFile,
-          trackName,
+          trackName: instrumentName,
+          songName,
         }
       }));
     });
@@ -228,8 +263,14 @@ export default function TabViewer({ fileUrl }: Props) {
       : typeof api.timePosition === 'number'   ? api.timePosition
       : 0;
 
+      // Check if this is the first beat of the song (beat 1, bar 1)
+      // Beat objects have index property (0-based) and voice.bar.index
+      const beatIndex = beat?.index ?? beat?.beat?.index ?? -1;
+      const barIndex = beat?.voice?.bar?.index ?? beat?.beat?.voice?.bar?.index ?? -1;
+      const isFirstBeat = beatIndex === 0 && barIndex === 0;
+
       window.dispatchEvent(new CustomEvent('tab-expected', {
-        detail: { tSec, pitches, xPx: beat?.x ?? 0 }
+        detail: { tSec, pitches, xPx: beat?.x ?? 0, isFirstBeat }
       }));
 
       // allow DOM to place the cursor first, then scroll
@@ -241,6 +282,19 @@ export default function TabViewer({ fileUrl }: Props) {
       requestAnimationFrame(ensureCursorVisible);
     });
 
+    // Detect when user clicks on beats/measures during playback (seeking)
+    api.beatMouseDown?.on?.(() => {
+      // Check if currently playing
+      const state = api.playerState ?? api.player?.state;
+      const code = typeof state === 'number' ? state : (state?.state ?? state?.playerState ?? state);
+      const playing = code === 1 || code === 'Playing' || code === 'playing';
+      
+      if (playing) {
+        // User clicked a measure while playing - this is seeking
+        window.dispatchEvent(new CustomEvent('seek-alpha'));
+      }
+    });
+
     return () => {
       try { api?.destroy?.(); } catch {}
       setTracks([]); setTrackIdx(null); setIsPlaying(false); setReady(false);
@@ -249,6 +303,13 @@ export default function TabViewer({ fileUrl }: Props) {
 
   // keep internal currentFile in sync if parent prop changes
   useEffect(() => { setCurrentFile(fileUrl); }, [fileUrl]);
+
+  // Keep trackIdxRef in sync with trackIdx state
+  useEffect(() => {
+    if (trackIdx !== null) {
+      trackIdxRef.current = trackIdx;
+    }
+  }, [trackIdx]);
 
   const onSelectTrack = (idxStr: string) => {
     const idx = parseInt(idxStr, 10);
@@ -259,7 +320,16 @@ export default function TabViewer({ fileUrl }: Props) {
     setTimeout(() => requestAnimationFrame(ensureCursorVisible), 0);
   };
 
-  const handlePlay  = () => { const a = apiRef.current; try { a?.play?.();  setIsPlaying(true);  requestAnimationFrame(ensureCursorVisible); } catch {} };
+  const handlePlay  = () => { 
+    const a = apiRef.current; 
+    try { 
+      // Reset score state before starting playback
+      window.dispatchEvent(new CustomEvent('reset-scorer'));
+      a?.play?.();  
+      setIsPlaying(true);  
+      requestAnimationFrame(ensureCursorVisible); 
+    } catch {} 
+  };
   const handlePause = () => { const a = apiRef.current; try { a?.pause?.(); setIsPlaying(false); } catch {} };
   const handleStop  = () => { const a = apiRef.current; try { a?.stop?.();  setIsPlaying(false); } catch {} };
 

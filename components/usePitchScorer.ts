@@ -38,6 +38,7 @@ export default function usePitchScorer() {
     paused: false,
     trackChanged: false,
     manualStop: false,
+    seeked: false,
   });
   
   // Use refs to ensure we always have latest values in event handlers
@@ -67,17 +68,23 @@ export default function usePitchScorer() {
 
   useEffect(() => {
     const onExpected = (e: Event) => {
-      const { pitches } = (e as CustomEvent).detail as { tSec: number; pitches: number[] };
+      const { pitches, isFirstBeat } = (e as CustomEvent).detail as { tSec: number; pitches: number[]; isFirstBeat?: boolean };
 
       // Build pending-map (midi -> count) for this beat
       const m = new Map<number, number>();
       (pitches ?? []).forEach((p) => m.set(p, (m.get(p) ?? 0) + 1));
       pendingRef.current = m;
 
-      // Mark as started when first beat arrives (playback has begun)
+      // Mark as started when first beat arrives, but ONLY if it's beat 1 bar 1
       if (!validity.started && pitches && pitches.length > 0) {
-        console.log('[usePitchScorer] Setting started=true, first beat detected');
-        setValidity((v) => ({ ...v, started: true }));
+        console.log('[usePitchScorer] First beat detected. isFirstBeat:', isFirstBeat);
+        if (isFirstBeat === true) {
+          console.log('[usePitchScorer] Setting started=true, playback started from beat 1');
+          setValidity((v) => ({ ...v, started: true }));
+        } else {
+          console.log('[usePitchScorer] Setting seeked=true, playback did NOT start from beat 1');
+          setValidity((v) => ({ ...v, seeked: true }));
+        }
       }
 
       // Increase TOTAL by #notes in beat
@@ -159,17 +166,20 @@ export default function usePitchScorer() {
   // Reset live/score when playback stops or a new song is loaded
   useEffect(() => {
     const resetAll = () => {
+      console.log('[usePitchScorer] Resetting all state (score, validity, pending notes)');
       pendingRef.current = new Map();
       bufRef.current = [];
       cooldownRef.current = 0;
       setLive({ err: 0, ok: false, target: null });
       setScore({ hits: 0, total: 0 });
-      setValidity({ started: false, paused: false, trackChanged: false, manualStop: false });
+      setValidity({ started: false, paused: false, trackChanged: false, manualStop: false, seeked: false });
     };
 
+    window.addEventListener('reset-scorer', resetAll as EventListener);
     window.addEventListener('stop-alpha', resetAll as EventListener);
     window.addEventListener('load-song', resetAll as EventListener);
     return () => {
+      window.removeEventListener('reset-scorer', resetAll as EventListener);
       window.removeEventListener('stop-alpha', resetAll as EventListener);
       window.removeEventListener('load-song', resetAll as EventListener);
     };
@@ -180,15 +190,18 @@ export default function usePitchScorer() {
     const onPause = () => setValidity((v) => ({ ...v, paused: true }));
     const onStop = () => setValidity((v) => ({ ...v, manualStop: true }));
     const onTrackChange = () => setValidity((v) => ({ ...v, trackChanged: true }));
+    const onSeek = () => setValidity((v) => ({ ...v, seeked: true }));
 
     window.addEventListener('pause-alpha', onPause as EventListener);
     window.addEventListener('stop-alpha', onStop as EventListener);
     window.addEventListener('select-track', onTrackChange as EventListener);
+    window.addEventListener('seek-alpha', onSeek as EventListener);
 
     return () => {
       window.removeEventListener('pause-alpha', onPause as EventListener);
       window.removeEventListener('stop-alpha', onStop as EventListener);
       window.removeEventListener('select-track', onTrackChange as EventListener);
+      window.removeEventListener('seek-alpha', onSeek as EventListener);
     };
   }, []);
 

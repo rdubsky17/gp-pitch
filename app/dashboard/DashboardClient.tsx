@@ -1,7 +1,7 @@
 'use client';
 
 import TabViewer from '@/components/TabViewer';
-import ScoreSavedToast from '@/components/ScoreSavedToast';
+import ScoreConfirmModal from '@/components/ScoreSavedToast';
 import { useGuestMode } from '@/hooks/useGuestMode';
 import { useScoreSaver } from '@/hooks/useScoreSaver';
 
@@ -24,7 +24,7 @@ export default function DashboardClient() {
       )}
 
       <TabViewer fileUrl="/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp" />
-      <ScoreSavedToast />
+      <ScoreConfirmModal />
     </main>
   );
 }
