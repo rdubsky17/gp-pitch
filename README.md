@@ -27,7 +27,7 @@ npm install
 
 ### Database Setup (SQLite):
 
-1. Create **.env** file with **DATABASE_URL** (see the format in .env.example)
+1. Create **.env** file (in the project folder) with **DATABASE_URL** (see the format in .env.example)
 ```bash
 DATABASE_URL="file:./prisma/data/database.db"
 ```
