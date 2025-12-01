@@ -6,7 +6,8 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx seed.ts"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.6.3",
