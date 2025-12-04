@@ -117,7 +117,7 @@ export default function TopRibbon() {
     try {
       const formData = new FormData();
       formData.append('file', file);
-      formData.append('songName', file.name.replace(/\.[^/.]+$/, ''));
+      formData.append('songName', file.name.replace(/\.[^/.]+$/, '')); // remove extension
       formData.append('artist', 'Unknown Artist');
 
       const res = await fetch('/api/upload', {
@@ -466,7 +466,7 @@ export default function TopRibbon() {
                         gap: 8,
                       }}
                     >
-                      {uploading ? '⏳ Uploading...' : '📤 Upload Guitar Pro File'}
+                      {uploading ? 'Uploading...' : 'Upload Guitar Pro File'}
                     </button>
                     {uploadError && (
                       <div style={{ marginTop: 8, padding: '8px 12px', background: '#fee', color: '#c00', borderRadius: 6, fontSize: 13 }}>
@@ -478,7 +478,6 @@ export default function TopRibbon() {
                   {/* User Uploads List */}
                   {userUploads.length === 0 ? (
                     <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
-                      <div style={{ fontSize: 48, marginBottom: 12 }}>🎸</div>
                       <div style={{ fontSize: 16, marginBottom: 8 }}>No uploads yet</div>
                       <div style={{ fontSize: 13 }}>Upload your first Guitar Pro file to get started</div>
                     </div>
