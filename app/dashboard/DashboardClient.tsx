@@ -14,7 +14,7 @@ export default function DashboardClient() {
   return (
     <main style={{ display: 'grid', gap: 16, padding: 16 }}>
       {isGuestMode && (
-        <div style={{ padding: 8, background: '#f0f0f0', borderRadius: 4, marginBottom: 8 }}>
+        <div style={{ padding: 8, background: '#f0f0f0', borderRadius: 4, marginBottom: 8, color: '#000' }}>
           You are in guest mode.{' '}
           <a href="/login" style={{ color: 'blue', textDecoration: 'underline' }}>
             Sign in

@@ -108,11 +108,20 @@ export default function usePitchScorer() {
         currentBeatIndexRef.current = beatIndex;
       }
 
-      // Build pending-map (midi -> count) for this beat
-      // Chords are now nested arrays: [[60, 64, 67]] for a chord, [[60]] for single note
+      // Build pending-map for this beat
+      // For CHORDS (multiple notes): Store all notes but mark it as a chord unit
+      // For SINGLE notes: Store the note
+      // This ensures only 1 hit per chord regardless of octaves
       const m = new Map<number, number>();
       (chords ?? []).forEach((chord) => {
-        chord.forEach((p) => m.set(p, (m.get(p) ?? 0) + 1));
+        if (chord.length > 1) {
+          // It's a chord - store all notes but they share a single "pending" count
+          // We'll use a special marker to indicate this is a chord unit
+          chord.forEach((p) => m.set(p, 0.5)); // 0.5 means "part of a chord"
+        } else if (chord.length === 1) {
+          // Single note
+          m.set(chord[0], (m.get(chord[0]) ?? 0) + 1);
+        }
       });
       pendingRef.current = m;
 
@@ -197,22 +206,54 @@ export default function usePitchScorer() {
       // Award one note when we first reach stability for a pending target
       if (stable && now >= cooldownRef.current) {
         const remaining = pending.get(bestTarget) ?? 0;
+        
+        // Check if this is part of a chord (marked with 0.5)
+        const isChordNote = remaining === 0.5;
+        
         if (remaining > 0) {
-          pending.set(bestTarget, remaining - 1);
-          if (pending.get(bestTarget) === 0) pending.delete(bestTarget);
-
-          setScore((s) => ({ ...s, hits: s.hits + 1 }));
-          
-          // Mark this note as correct in the current beat
-          const beatIdx = currentBeatIndexRef.current;
-          setNoteResults((prev) => {
-            const newResults = new Map(prev);
-            if (!newResults.has(beatIdx)) {
-              newResults.set(beatIdx, new Map());
+          // For chord notes (0.5), clear ALL chord notes from pending at once
+          if (isChordNote) {
+            // Find all notes with 0.5 (chord members) and clear them
+            const chordNotes: number[] = [];
+            for (const [midi, count] of pending.entries()) {
+              if (count === 0.5) {
+                chordNotes.push(midi);
+              }
             }
-            newResults.get(beatIdx)!.set(bestTarget, 'correct');
-            return newResults;
-          });
+            chordNotes.forEach(midi => pending.delete(midi));
+            
+            // Award 1 hit for the entire chord
+            setScore((s) => ({ ...s, hits: s.hits + 1 }));
+            
+            // Mark ALL chord notes as correct in results
+            const beatIdx = currentBeatIndexRef.current;
+            setNoteResults((prev) => {
+              const newResults = new Map(prev);
+              if (!newResults.has(beatIdx)) {
+                newResults.set(beatIdx, new Map());
+              }
+              const beatMap = newResults.get(beatIdx)!;
+              chordNotes.forEach(midi => beatMap.set(midi, 'correct'));
+              return newResults;
+            });
+          } else {
+            // Single note - original logic
+            pending.set(bestTarget, remaining - 1);
+            if (pending.get(bestTarget) === 0) pending.delete(bestTarget);
+
+            setScore((s) => ({ ...s, hits: s.hits + 1 }));
+            
+            // Mark this note as correct in the current beat
+            const beatIdx = currentBeatIndexRef.current;
+            setNoteResults((prev) => {
+              const newResults = new Map(prev);
+              if (!newResults.has(beatIdx)) {
+                newResults.set(beatIdx, new Map());
+              }
+              newResults.get(beatIdx)!.set(bestTarget, 'correct');
+              return newResults;
+            });
+          }
 
           cooldownRef.current = now + cooldownMs;
           bufRef.current = [];

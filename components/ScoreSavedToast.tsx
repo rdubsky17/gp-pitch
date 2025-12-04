@@ -16,6 +16,7 @@ export default function ScoreConfirmModal() {
   const [scoreData, setScoreData] = useState<ScoreData | null>(null);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     const handleScoreReady = (e: Event) => {
@@ -23,11 +24,22 @@ export default function ScoreConfirmModal() {
       setScoreData(data);
       setVisible(true);
       setSaved(false);
+      setError(null);
+    };
+
+    const handleScoreError = (e: Event) => {
+      const data = (e as CustomEvent).detail as { message: string };
+      setError(data.message);
+      setVisible(true);
+      setSaved(false);
+      setScoreData(null);
     };
 
     window.addEventListener('score-ready-to-save', handleScoreReady as EventListener);
+    window.addEventListener('score-save-error', handleScoreError as EventListener);
     return () => {
       window.removeEventListener('score-ready-to-save', handleScoreReady as EventListener);
+      window.removeEventListener('score-save-error', handleScoreError as EventListener);
     };
   }, []);
 
@@ -55,9 +67,84 @@ export default function ScoreConfirmModal() {
   const handleDiscard = () => {
     setVisible(false);
     setScoreData(null);
+    setError(null);
   };
 
-  if (!visible || !scoreData) return null;
+  if (!visible) return null;
+
+  // Show error message
+  if (error) {
+    return (
+      <>
+        <div
+          style={{
+            position: 'fixed',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: 'rgba(0, 0, 0, 0.7)',
+            zIndex: 9998,
+            animation: 'fadeIn 0.3s ease-out',
+          }}
+          onClick={handleDiscard}
+        />
+        <div
+          style={{
+            position: 'fixed',
+            top: '50%',
+            left: '50%',
+            transform: 'translate(-50%, -50%)',
+            background: '#fff',
+            borderRadius: 16,
+            padding: 32,
+            boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+            zIndex: 9999,
+            minWidth: 400,
+            textAlign: 'center',
+            animation: 'slideUp 0.3s ease-out',
+          }}
+        >
+          <div style={{ fontSize: 48, marginBottom: 16, color: '#ef4444' }}>⚠️</div>
+          <h2 style={{ margin: '0 0 16px 0', color: '#ef4444', fontSize: 24 }}>Error</h2>
+          <p style={{ color: '#666', marginBottom: 24, fontSize: 16 }}>{error}</p>
+          <button
+            onClick={handleDiscard}
+            style={{
+              background: '#ef4444',
+              color: '#fff',
+              border: 'none',
+              padding: '12px 24px',
+              borderRadius: 8,
+              fontSize: 16,
+              fontWeight: 600,
+              cursor: 'pointer',
+            }}
+          >
+            Close
+          </button>
+        </div>
+        <style>{`
+          @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+          }
+          @keyframes slideUp {
+            from {
+              opacity: 0;
+              transform: translate(-50%, -40%);
+            }
+            to {
+              opacity: 1;
+              transform: translate(-50%, -50%);
+            }
+          }
+        `}</style>
+      </>
+    );
+  }
+
+  if (!scoreData) return null;
 
   // Calculate grade based on percentage
   const getGrade = (pct: number) => {

@@ -375,6 +375,8 @@ export default function TabViewer({ fileUrl }: Props) {
                   const beatNoteResults = currentNoteResults.get(uniqueBeatIndex)!;
                   
                   // Determine overall result for this beat
+                  // For chords: green if ANY note was hit correctly
+                  // For single notes: must be correct to be green
                   let correctCount = 0;
                   let totalCount = 0;
                   beatNoteResults.forEach((result) => {
@@ -383,7 +385,8 @@ export default function TabViewer({ fileUrl }: Props) {
                   });
                   
                   // Apply color class to the element and its children
-                  if (correctCount === totalCount && totalCount > 0) {
+                  // Green if at least one note was correct
+                  if (correctCount > 0) {
                     target.classList.add('note-correct');
                   } else if (totalCount > 0) {
                     target.classList.add('note-incorrect');

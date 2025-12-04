@@ -106,8 +106,26 @@ export function useScoreSaver() {
         });
 
         if (!response.ok) {
-          const error = await response.json();
-          console.error('[useScoreSaver] Failed to save score:', error);
+          let errorMessage = 'Failed to save score';
+          
+          // Show error to user
+          if (response.status === 401) {
+            errorMessage = 'Login Required to Save Scores';
+          } else {
+            try {
+              const error = await response.json();
+              errorMessage = error.error || errorMessage;
+              console.error('[useScoreSaver] Failed to save score:', error);
+            } catch (e) {
+              console.error('[useScoreSaver] Failed to parse error response');
+            }
+          }
+          
+          window.dispatchEvent(
+            new CustomEvent('score-save-error', {
+              detail: { message: errorMessage },
+            })
+          );
           return;
         }
 

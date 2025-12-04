@@ -17,7 +17,7 @@ export async function POST(req: NextRequest) {
     console.log('Token value:', token ? 'exists' : 'missing');
     
     if (!token) {
-      return NextResponse.json({ error: 'Unauthorized - No token found' }, { status: 401 });
+      return NextResponse.json({ error: 'Sign-In Required to Upload Songs' }, { status: 401 });
     }
 
     const decoded = await verifyToken(token);
