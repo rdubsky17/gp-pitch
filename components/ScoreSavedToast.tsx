@@ -155,7 +155,8 @@ export default function ScoreConfirmModal() {
     if (pct >= 75) return { grade: 'B', color: '#3b82f6' };
     if (pct >= 70) return { grade: 'C+', color: '#8b5cf6' };
     if (pct >= 65) return { grade: 'C', color: '#8b5cf6' };
-    return { grade: 'D', color: '#ef4444' };
+    if (pct >= 50) return { grade: 'D', color: '#6e43d4ff' };
+    return { grade: 'F', color: '#ef4444' };
   };
 
   const { grade, color } = getGrade(scoreData.percentage);
