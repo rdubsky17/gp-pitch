@@ -69,10 +69,8 @@ export default function TabViewer({ fileUrl }: Props) {
     const host = hostRef.current;
     if (!vp || !host) return;
 
-    const el =
-      (host.querySelector('.at-cursor-beat') as HTMLElement) ||
-      (host.querySelector('.at-cursor-bar')  as HTMLElement) ||
-      (host.querySelector('.at-cursor')      as HTMLElement);
+    // Use the highlighted beat instead of cursor (since cursor is hidden)
+    const el = host.querySelector('.at-highlight') as HTMLElement;
 
     if (!el) return;
 
