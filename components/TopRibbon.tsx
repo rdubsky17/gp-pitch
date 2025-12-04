@@ -282,6 +282,7 @@ export default function TopRibbon() {
             )}
           </div>
 
+          {/* Profile button */}
           <div style={{ position: 'relative' }} ref={profileRef}>
             <button onClick={() => setShowProfile(v => !v)} aria-haspopup="true" style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}>Profile</button>
             {showProfile && (
