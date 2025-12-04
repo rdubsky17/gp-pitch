@@ -74,46 +74,11 @@ body {
 }
 .at-controls option { color: #111; /* dropdown list text */ }
 
-/* =======================================================================
-   CURSOR: Consolidated, conflict-free styles (beat line made thicker)
-   ======================================================================= */
-
-/* put the cursor overlay above the SVG; never steal clicks */
+/* Hide alphaTab cursor completely */
 .alphaTabCard .at-cursor,
 .alphaTabCard .at-cursor-bar,
 .alphaTabCard .at-cursor-beat {
-  position: absolute !important;
-  z-index: 40 !important;
-  pointer-events: none !important;
-  mix-blend-mode: normal !important;
-  /* Reduce compositor flicker on some GPUs */
-  will-change: transform, left, top, width, height;
-  transform: translateZ(0);
-}
-
-/* measure/beat group highlight area (light blue wash) */
-.alphaTabCard .at-cursor {
-  background: rgba(30, 144, 255, 0.12) !important;
-  border-radius: 2px;
-}
-
-/* some builds emit a "bar" rect; keep it subtle */
-.alphaTabCard .at-cursor-bar {
-  background: rgba(255, 242, 0, 0.18) !important;
-}
-
-/* the thin moving line — make it chunky enough to stay visible */
-.alphaTabCard .at-cursor-beat {
-  /* enforce consistent thickness regardless of other rules */
-  width: 4px !important;
-  min-width: 4px !important;
-  max-width: 4px !important;
-
-  background: rgba(30, 144, 255, 0.95) !important; /* DodgerBlue */
-  opacity: 1 !important;
-
-  /* subtle outline so it doesn't vanish over ledger lines */
-  box-shadow: 0 0 0 1px rgba(0,0,0,0.15);
+  display: none !important;
 }
 
 /* optional: highlight currently played noteheads (SVG renderer only) */
@@ -122,11 +87,14 @@ body {
   stroke: #0a7cff !important;
 }
 
-.alphaTabCard .at-cursor-beat {
-  width: 3px !important;
-  background: rgba(30, 144, 255, 0.95) !important;
-  pointer-events: none !important;
-  /* kill layout-induced flicker on some drivers */
-  backface-visibility: hidden;
-  contain: paint;
+/* Correct notes - green */
+.alphaTabCard .note-correct * {
+  fill: #10b981 !important;
+  stroke: #10b981 !important;
+}
+
+/* Incorrect/missed notes - red */
+.alphaTabCard .note-incorrect * {
+  fill: #ef4444 !important;
+  stroke: #ef4444 !important;
 }

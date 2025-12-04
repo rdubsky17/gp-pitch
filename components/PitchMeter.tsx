@@ -161,11 +161,22 @@ export default function PitchMeter({ variant }: { variant?: 'ribbon' | 'full' })
     }
   }, [running, status, freq]);
 
+  // Log channelIndex changes
   useEffect(() => {
-    if (!running) return;
-    buildGraph();
+    log('PitchMeter: channelIndex changed to', channelIndex);
+  }, [channelIndex]);
+
+  // Rebuild audio graph when device or channel changes while running
+  useEffect(() => {
+    if (!running) {
+      log('Rebuild skipped: not running', { deviceId, channelIndex, running });
+      return;
+    }
+    log('Device or channel changed, rebuilding graph...', { deviceId, channelIndex, running });
+    buildGraph().catch(e => log('rebuild failed', e));
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [deviceId, channelIndex]);
+  }, [deviceId, channelIndex, running]);
+
   return (
     <div style={{ fontFamily: 'system-ui, sans-serif', padding: variant === 'ribbon' ? 6 : 16, maxWidth: variant === 'ribbon' ? 'auto' : 900 }}>
       {variant !== 'ribbon' && <h2>Pitch Meter</h2>}

@@ -17,6 +17,7 @@ model User {
   password    String
   createdAt   DateTime @default(now())
 
+  uploadedTracks Track[] @relation("UploadedTracks")
   Uploads     UserTracks[]
   scores      Score[]
 }
@@ -25,8 +26,12 @@ model Track {
   id          Int       @id @default(autoincrement())
   songName    String   
   artist      String
+  filePath    String    // relative path to .gp file (e.g., /songs/song.gp or /uploads/user-1/song.gp)
+  isUserUpload Boolean  @default(false) // distinguish user uploads from library
+  uploadedBy  Int?      // user who uploaded (null for library songs)
   uploadedAt  DateTime  @default(now())
 
+  uploader    User?     @relation("UploadedTracks", fields: [uploadedBy], references: [id])
   Uploads     UserTracks[]
   scores      Score[]
 }

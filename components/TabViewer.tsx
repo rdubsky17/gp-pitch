@@ -25,7 +25,7 @@ export default function TabViewer({ fileUrl }: Props) {
   const apiRef      = useRef<any>(null);
   const trackIdxRef = useRef<number | null>(null);
 
-  const { live, score, validity, validityRef, scoreRef } = usePitchScorer();
+  const { live, score, validity, validityRef, scoreRef, noteResults } = usePitchScorer();
 
   const [ready, setReady]         = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -195,22 +195,17 @@ export default function TabViewer({ fileUrl }: Props) {
       let instrumentName = 'Unknown Instrument';
       
       try {
-        // Method 1: Check api.settings.display.tracks (what we told it to render)
-        if (api.settings?.display?.tracks && api.settings.display.tracks.length > 0) {
-          const renderedTrack = api.settings.display.tracks[0];
-          instrumentName = renderedTrack?.name || 'Unknown Instrument';
+        // Use trackIdxRef as primary source of truth (updated when track is selected)
+        if (trackIdxRef.current !== null && api.score?.tracks) {
+          const track = api.score.tracks[trackIdxRef.current];
+          instrumentName = track?.name || 'Unknown Instrument';
         }
-        // Method 2: Use the trackIdx state variable
+        // Fallback to trackIdx state variable
         else if (trackIdx !== null && api.score?.tracks) {
           const track = api.score.tracks[trackIdx];
           instrumentName = track?.name || 'Unknown Instrument';
         }
-        // Method 3: Use trackIdxRef (fallback)
-        else if (trackIdxRef.current !== null && api.score?.tracks) {
-          const track = api.score.tracks[trackIdxRef.current];
-          instrumentName = track?.name || 'Unknown Instrument';
-        }
-        // Method 4: Last resort - just get first track
+        // Fallback to first track in score
         else if (api.score?.tracks && api.score.tracks.length > 0) {
           instrumentName = api.score.tracks[0]?.name || 'Unknown Instrument';
         }
@@ -254,9 +249,21 @@ export default function TabViewer({ fileUrl }: Props) {
       const notesArr = Array.isArray(beat?.notes) ? beat.notes
                     : Array.isArray(beat?.beat?.notes) ? beat.beat.notes
                     : [];
+      
+      // Filter out ghost notes, dead notes, and extract pitches
       const pitches: number[] = notesArr
+        .filter((n: any) => {
+          // Skip ghost notes (grace notes shown in parentheses)
+          if (n?.isGhost === true) return false;
+          // Skip dead notes (muted/percussive notes marked with 'X')
+          if (n?.isDead === true) return false;
+          return true;
+        })
         .map((n: any) => n?.realValue)
         .filter((x: any) => typeof x === 'number' && isFinite(x));
+
+      // Send as nested array - single chord = [[60, 64, 67]], single note = [[60]]
+      const chords: number[][] = pitches.length > 0 ? [pitches] : [];
 
       const tSec =
         typeof api.timePosition === 'function' ? api.timePosition()
@@ -268,9 +275,18 @@ export default function TabViewer({ fileUrl }: Props) {
       const beatIndex = beat?.index ?? beat?.beat?.index ?? -1;
       const barIndex = beat?.voice?.bar?.index ?? beat?.beat?.voice?.bar?.index ?? -1;
       const isFirstBeat = beatIndex === 0 && barIndex === 0;
+      
+      // Create a unique beat identifier: barIndex * 1000 + beatIndex
+      // This ensures each beat has a unique index across the entire song
+      const uniqueBeatIndex = barIndex >= 0 && beatIndex >= 0 ? barIndex * 1000 + beatIndex : -1;
+
+      // Store current beat info for coloring
+      previousBeatRef.current = barIndex >= 0 && beatIndex >= 0 
+        ? { barIndex, beatIndex, uniqueIndex: uniqueBeatIndex }
+        : null;
 
       window.dispatchEvent(new CustomEvent('tab-expected', {
-        detail: { tSec, pitches, xPx: beat?.x ?? 0, isFirstBeat }
+        detail: { tSec, chords, xPx: beat?.x ?? 0, isFirstBeat, beatIndex: uniqueBeatIndex }
       }));
 
       // allow DOM to place the cursor first, then scroll
@@ -311,6 +327,113 @@ export default function TabViewer({ fileUrl }: Props) {
     }
   }, [trackIdx]);
 
+  // Track previous beat to apply colors after it's no longer highlighted
+  const previousBeatRef = useRef<{ barIndex: number; beatIndex: number; uniqueIndex: number } | null>(null);
+  const appliedColorsRef = useRef<Set<number>>(new Set()); // Track which beats we've already colored
+  const noteResultsRef = useRef(noteResults); // Ref for synchronous access in MutationObserver
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    noteResultsRef.current = noteResults;
+  }, [noteResults]);
+
+  // Apply color classes to notes based on noteResults using MutationObserver
+  useEffect(() => {
+    if (!hostRef.current) return;
+
+    const host = hostRef.current;
+    
+    // Use MutationObserver to watch for class changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const target = mutation.target as Element;
+          
+          const oldClasses = mutation.oldValue || '';
+          const hasHighlightNow = target.classList.contains('at-highlight');
+          const hadHighlightBefore = oldClasses.includes('at-highlight');
+          
+          // When highlight is ADDED, store the current beat index on the element
+          if (!hadHighlightBefore && hasHighlightNow && previousBeatRef.current) {
+            const uniqueBeatIndex = previousBeatRef.current.uniqueIndex;
+            target.setAttribute('data-beat-idx', String(uniqueBeatIndex));
+          }
+          
+          // When highlight is REMOVED, apply color based on stored beat index (with delay)
+          if (hadHighlightBefore && !hasHighlightNow) {
+            const beatIdxStr = target.getAttribute('data-beat-idx');
+            
+            if (beatIdxStr) {
+              const uniqueBeatIndex = parseInt(beatIdxStr, 10);
+              
+              // Wait a bit for noteResults to be updated (missed notes are marked when next beat starts)
+              setTimeout(() => {
+                // Use ref for synchronous access to latest noteResults
+                const currentNoteResults = noteResultsRef.current;
+                
+                if (currentNoteResults.has(uniqueBeatIndex) && !appliedColorsRef.current.has(uniqueBeatIndex)) {
+                  const beatNoteResults = currentNoteResults.get(uniqueBeatIndex)!;
+                  
+                  // Determine overall result for this beat
+                  let correctCount = 0;
+                  let totalCount = 0;
+                  beatNoteResults.forEach((result) => {
+                    totalCount++;
+                    if (result === 'correct') correctCount++;
+                  });
+                  
+                  // Apply color class to the element and its children
+                  if (correctCount === totalCount && totalCount > 0) {
+                    target.classList.add('note-correct');
+                  } else if (totalCount > 0) {
+                    target.classList.add('note-incorrect');
+                  }
+                  
+                  // Mark this beat as colored
+                  appliedColorsRef.current.add(uniqueBeatIndex);
+                }
+              }, 50); // Small delay to allow missed notes to be marked
+              
+              // Clean up the data attribute (after delay)
+              setTimeout(() => target.removeAttribute('data-beat-idx'), 100);
+            }
+          }
+        }
+      });
+    });
+
+    // Observe the entire host for class changes
+    observer.observe(host, {
+      attributes: true,
+      attributeOldValue: true,
+      attributeFilter: ['class'],
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, [noteResults]);
+
+  // Clear note colors when playback resets
+  useEffect(() => {
+    const clearColors = () => {
+      if (!hostRef.current) return;
+      const coloredNotes = hostRef.current.querySelectorAll('.note-correct, .note-incorrect');
+      coloredNotes.forEach((el) => {
+        el.classList.remove('note-correct', 'note-incorrect');
+      });
+      appliedColorsRef.current.clear();
+      previousBeatRef.current = null;
+    };
+
+    window.addEventListener('reset-scorer', clearColors);
+    window.addEventListener('load-song', clearColors);
+    
+    return () => {
+      window.removeEventListener('reset-scorer', clearColors);
+      window.removeEventListener('load-song', clearColors);
+    };
+  }, []);
+
   const onSelectTrack = (idxStr: string) => {
     const idx = parseInt(idxStr, 10);
     setTrackIdx(idx);
@@ -325,6 +448,15 @@ export default function TabViewer({ fileUrl }: Props) {
     try { 
       // Reset score state before starting playback
       window.dispatchEvent(new CustomEvent('reset-scorer'));
+      
+      // Check if starting from beginning (position ~0)
+      const timePos = typeof a.timePosition === 'function' ? a.timePosition() 
+                    : typeof a.timePosition === 'number' ? a.timePosition : 0;
+      const startedFromBeginning = timePos < 1; // within first second
+      window.dispatchEvent(new CustomEvent('playback-started', { 
+        detail: { fromBeginning: startedFromBeginning } 
+      }));
+      
       a?.play?.();  
       setIsPlaying(true);  
       requestAnimationFrame(ensureCursorVisible); 

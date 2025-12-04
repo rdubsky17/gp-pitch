@@ -22,6 +22,10 @@ const centsErr = (hz: number, midi: number) => fold1200(rawCentsErr(hz, midi));
 
 type Frame = { t: number; ok: boolean; err: number; target: number };
 
+// Track result for each beat: beatIndex -> map of midi -> 'correct' | 'incorrect' | 'missed'
+export type NoteResult = 'correct' | 'incorrect' | 'missed';
+export type BeatResults = Map<number, Map<number, NoteResult>>;
+
 export default function usePitchScorer() {
   // live readout for UI
   const [live, setLive] = useState<{ err: number; ok: boolean; target: number | null }>({
@@ -31,6 +35,9 @@ export default function usePitchScorer() {
   });
   // aggregate score
   const [score, setScore] = useState({ hits: 0, total: 0 });
+  
+  // Track note results per beat for coloring
+  const [noteResults, setNoteResults] = useState<BeatResults>(new Map());
 
   // validity tracking for database persistence
   const [validity, setValidity] = useState({
@@ -53,12 +60,18 @@ export default function usePitchScorer() {
     scoreRef.current = score;
   }, [score]);
 
+  // Track if playback started from beginning (to handle songs with initial rests)
+  const startedFromBeginningRef = useRef(false);
+
   // pending notes for the *current beat*: midi -> remaining count
   const pendingRef = useRef<Map<number, number>>(new Map());
   // sliding window of recent detection frames
   const bufRef = useRef<Frame[]>([]);
   // cooldown to avoid double-awarding
   const cooldownRef = useRef<number>(0);
+  
+  // Track current beat index for result recording
+  const currentBeatIndexRef = useRef<number>(0);
 
   // tuning for stability
   const tolerance = 25;   // cents window for "in tune"
@@ -68,29 +81,61 @@ export default function usePitchScorer() {
 
   useEffect(() => {
     const onExpected = (e: Event) => {
-      const { pitches, isFirstBeat } = (e as CustomEvent).detail as { tSec: number; pitches: number[]; isFirstBeat?: boolean };
+      const { chords, isFirstBeat, beatIndex } = (e as CustomEvent).detail as { tSec: number; chords: number[][]; isFirstBeat?: boolean; beatIndex?: number };
+
+      // Before processing new beat, mark any remaining pending notes from previous beat as missed
+      const prevBeatIdx = currentBeatIndexRef.current;
+      const prevPending = pendingRef.current;
+      if (prevPending.size > 0 && typeof prevBeatIdx === 'number') {
+        setNoteResults((prev) => {
+          const newResults = new Map(prev);
+          if (!newResults.has(prevBeatIdx)) {
+            newResults.set(prevBeatIdx, new Map());
+          }
+          const beatMap = newResults.get(prevBeatIdx)!;
+          for (const [midi] of prevPending) {
+            // Only mark as missed if not already marked as correct
+            if (!beatMap.has(midi)) {
+              beatMap.set(midi, 'missed');
+            }
+          }
+          return newResults;
+        });
+      }
+
+      // Store current beat index
+      if (typeof beatIndex === 'number') {
+        currentBeatIndexRef.current = beatIndex;
+      }
 
       // Build pending-map (midi -> count) for this beat
+      // Chords are now nested arrays: [[60, 64, 67]] for a chord, [[60]] for single note
       const m = new Map<number, number>();
-      (pitches ?? []).forEach((p) => m.set(p, (m.get(p) ?? 0) + 1));
+      (chords ?? []).forEach((chord) => {
+        chord.forEach((p) => m.set(p, (m.get(p) ?? 0) + 1));
+      });
       pendingRef.current = m;
 
-      // Mark as started when first beat arrives, but ONLY if it's beat 1 bar 1
-      if (!validity.started && pitches && pitches.length > 0) {
-        console.log('[usePitchScorer] First beat detected. isFirstBeat:', isFirstBeat);
-        if (isFirstBeat === true) {
-          console.log('[usePitchScorer] Setting started=true, playback started from beat 1');
+      // Mark as started when first beat with notes arrives
+      // Valid if: beat 1 bar 1, OR playback started from beginning (handles songs with initial rests)
+      const hasNotes = chords && chords.length > 0 && chords.some(chord => chord.length > 0);
+      if (!validity.started && hasNotes) {
+        const isValidStart = isFirstBeat === true || startedFromBeginningRef.current === true;
+        console.log('[usePitchScorer] First beat detected. isFirstBeat:', isFirstBeat, 'startedFromBeginning:', startedFromBeginningRef.current, 'isValidStart:', isValidStart);
+        if (isValidStart) {
+          console.log('[usePitchScorer] Setting started=true, playback started from beginning');
           setValidity((v) => ({ ...v, started: true }));
+          startedFromBeginningRef.current = false; // consume flag
         } else {
-          console.log('[usePitchScorer] Setting seeked=true, playback did NOT start from beat 1');
+          console.log('[usePitchScorer] Setting seeked=true, playback did NOT start from beginning');
           setValidity((v) => ({ ...v, seeked: true }));
         }
       }
 
-      // Increase TOTAL by #notes in beat
-      const notesInBeat = pitches?.length ?? 0;
-      if (notesInBeat > 0) {
-        setScore((s) => ({ ...s, total: s.total + notesInBeat }));
+      // Increase TOTAL by number of chord units (1 per chord, regardless of chord size)
+      const chordUnits = (chords ?? []).filter(chord => chord.length > 0).length;
+      if (chordUnits > 0) {
+        setScore((s) => ({ ...s, total: s.total + chordUnits }));
       }
 
       // Reset per-beat state
@@ -104,6 +149,15 @@ export default function usePitchScorer() {
       const pending = pendingRef.current;
 
       if (!pending || pending.size === 0) {
+        bufRef.current = [];
+        setLive({ err: 0, ok: false, target: null });
+        return;
+      }
+
+      // If no valid pitch detected (threshold: 30 Hz), clear display
+      // This prevents showing error values when no input or just noise is present
+      // Note: Bass low E is ~41 Hz, so threshold must be below that
+      if (hz <= 30) {
         bufRef.current = [];
         setLive({ err: 0, ok: false, target: null });
         return;
@@ -148,6 +202,17 @@ export default function usePitchScorer() {
           if (pending.get(bestTarget) === 0) pending.delete(bestTarget);
 
           setScore((s) => ({ ...s, hits: s.hits + 1 }));
+          
+          // Mark this note as correct in the current beat
+          const beatIdx = currentBeatIndexRef.current;
+          setNoteResults((prev) => {
+            const newResults = new Map(prev);
+            if (!newResults.has(beatIdx)) {
+              newResults.set(beatIdx, new Map());
+            }
+            newResults.get(beatIdx)!.set(bestTarget, 'correct');
+            return newResults;
+          });
 
           cooldownRef.current = now + cooldownMs;
           bufRef.current = [];
@@ -170,18 +235,29 @@ export default function usePitchScorer() {
       pendingRef.current = new Map();
       bufRef.current = [];
       cooldownRef.current = 0;
+      startedFromBeginningRef.current = false;
+      currentBeatIndexRef.current = 0;
       setLive({ err: 0, ok: false, target: null });
       setScore({ hits: 0, total: 0 });
+      setNoteResults(new Map());
       setValidity({ started: false, paused: false, trackChanged: false, manualStop: false, seeked: false });
+    };
+
+    const onPlaybackStarted = (e: Event) => {
+      const { fromBeginning } = (e as CustomEvent).detail || {};
+      startedFromBeginningRef.current = fromBeginning === true;
+      console.log('[usePitchScorer] Playback started. fromBeginning:', fromBeginning);
     };
 
     window.addEventListener('reset-scorer', resetAll as EventListener);
     window.addEventListener('stop-alpha', resetAll as EventListener);
     window.addEventListener('load-song', resetAll as EventListener);
+    window.addEventListener('playback-started', onPlaybackStarted as EventListener);
     return () => {
       window.removeEventListener('reset-scorer', resetAll as EventListener);
       window.removeEventListener('stop-alpha', resetAll as EventListener);
       window.removeEventListener('load-song', resetAll as EventListener);
+      window.removeEventListener('playback-started', onPlaybackStarted as EventListener);
     };
   }, []);
 
@@ -205,5 +281,5 @@ export default function usePitchScorer() {
     };
   }, []);
 
-  return { live, score, validity, validityRef, scoreRef };
+  return { live, score, validity, validityRef, scoreRef, noteResults };
 }

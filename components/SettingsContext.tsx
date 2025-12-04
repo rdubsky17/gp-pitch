@@ -41,7 +41,11 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const [hop, setHop] = useState<number>(defaultState.hop);
   const [devices, setDevices] = useState<MediaDev[]>(defaultState.devices);
   const [deviceId, setDeviceId] = useState<string>(defaultState.deviceId);
-  const [channelIndex, setChannelIndex] = useState<number>(0);
+  const [channelIndex, setChannelIndexRaw] = useState<number>(0);
+  const setChannelIndex = (i: number) => {
+    console.log('SettingsContext: setChannelIndex called with', i);
+    setChannelIndexRaw(i);
+  };
 
   useEffect(() => {
     (async () => {

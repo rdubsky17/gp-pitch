@@ -9,10 +9,13 @@ export default function TopRibbon() {
   const hideOnLogin = pathname === '/login' || pathname === '/signup' || pathname === '/reset-password';
 
   const [showSettings, setShowSettings] = useState(false);
-  const [showTracks, setShowTracks] = useState(false);
+  const [showSongModal, setShowSongModal] = useState(false);
+  const [showInstruments, setShowInstruments] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [songTab, setSongTab] = useState<'library' | 'uploads'>('library');
   const ref = useRef<HTMLDivElement | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
+  const instrumentRef = useRef<HTMLDivElement | null>(null);
 
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('idle');
@@ -24,6 +27,10 @@ export default function TopRibbon() {
   const [currentTrack, setCurrentTrack] = useState<number | null>(null);
   const [audioOn, setAudioOn] = useState(false);
   const [songs, setSongs] = useState<Array<{ name: string; file: string }>>([]);
+  const [userUploads, setUserUploads] = useState<Array<{ id: number; songName: string; artist: string; filePath: string }>>([]);
+  const [uploading, setUploading] = useState(false);
+  const [uploadError, setUploadError] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   // Listen for pitch status events from PitchMeter
   // Re-run when `hideOnLogin` changes so listeners are attached after navigation
@@ -63,6 +70,97 @@ export default function TopRibbon() {
     };
   }, [hideOnLogin]);
 
+  // Fetch user uploads when uploads tab is opened
+  useEffect(() => {
+    if (showSongModal && songTab === 'uploads') {
+      fetchUserUploads();
+    }
+  }, [showSongModal, songTab]);
+
+  const fetchUserUploads = async () => {
+    try {
+      const res = await fetch('/api/uploads');
+      if (res.ok) {
+        const data = await res.json();
+        setUserUploads(data.tracks || []);
+      }
+    } catch (error) {
+      console.error('Failed to fetch uploads:', error);
+    }
+  };
+
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    // Check file size (max 200KB)
+    if (file.size > 200 * 1024) {
+      setUploadError('File too large. Maximum size is 200KB.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    // Check upload limit (max 5 songs)
+    if (userUploads.length >= 5) {
+      setUploadError('Upload limit reached. Maximum 5 songs allowed.');
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+      return;
+    }
+
+    setUploading(true);
+    setUploadError(null);
+
+    try {
+      const formData = new FormData();
+      formData.append('file', file);
+      formData.append('songName', file.name.replace(/\.[^/.]+$/, ''));
+      formData.append('artist', 'Unknown Artist');
+
+      const res = await fetch('/api/upload', {
+        method: 'POST',
+        body: formData,
+      });
+
+      const data = await res.json();
+
+      if (!res.ok) {
+        throw new Error(data.error || 'Upload failed');
+      }
+
+      // Refresh uploads list
+      await fetchUserUploads();
+      
+      // Reset file input
+      if (fileInputRef.current) {
+        fileInputRef.current.value = '';
+      }
+    } catch (error: any) {
+      setUploadError(error.message || 'Upload failed');
+    } finally {
+      setUploading(false);
+    }
+  };
+
+  const handleDeleteUpload = async (trackId: number) => {
+    if (!confirm('Are you sure you want to delete this song?')) return;
+
+    try {
+      const res = await fetch(`/api/uploads?id=${trackId}`, {
+        method: 'DELETE',
+      });
+
+      if (res.ok) {
+        await fetchUserUploads();
+      }
+    } catch (error) {
+      console.error('Failed to delete upload:', error);
+    }
+  };
+
   useEffect(() => {
     if (hideOnLogin) return;
 
@@ -72,6 +170,9 @@ export default function TopRibbon() {
       }
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setShowProfile(false);
+      }
+      if (instrumentRef.current && !instrumentRef.current.contains(e.target as Node)) {
+        setShowInstruments(false);
       }
     }
     document.addEventListener('click', onDoc);
@@ -88,40 +189,53 @@ export default function TopRibbon() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 12, zIndex: 1200 }}>
           <div style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.6, background: 'linear-gradient(135deg,#6ee7b7,#3b82f6)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>Guitar Tabs</div>
 
-          {/* Song selection button */}
-          <div style={{ position: 'relative' }}>
-            <button onClick={() => setShowTracks(v => !v)} style={{ padding: '6px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(197, 18, 18, 0.06)', fontSize: 13 }}>Song Selection</button>
-            {showTracks && (
-              <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 8px)', background: '#fff', color: '#111', borderRadius: 6, boxShadow: '0 6px 18px rgba(0,0,0,0.15)', minWidth: 300 }}>
-                <div style={{ padding: 10 }}>
-                  <strong>Choose song</strong>
-                </div>
-                <div style={{ maxHeight: 320, overflow: 'auto' }}>
-                  {songs.length === 0 && <div style={{ padding: 10, color: '#666' }}>No songs found</div>}
-                  {songs.map((s, i) => (
-                    <div key={i} style={{ padding: 10, borderTop: '1px solid #eee', cursor: 'pointer' }} onClick={() => { window.dispatchEvent(new CustomEvent('load-song', { detail: { url: s.file } })); setShowTracks(false); }}>{s.name}</div>
-                  ))}
-                </div>
+          {/* Song selection button - opens centered modal */}
+          <button 
+            onClick={() => setShowSongModal(true)} 
+            style={{ padding: '6px 12px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+          >
+            Song Selection
+          </button>
+
+          {/* Instrument selection dropdown (mimics song selection style) */}
+          <div style={{ position: 'relative' }} ref={instrumentRef}>
+            <button 
+              onClick={() => setShowInstruments(v => !v)} 
+              style={{ padding: '6px 12px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+            >
+              {currentTrack !== null && tracks.length > 0 
+                ? tracks.find(t => t.idx === currentTrack)?.name || 'Instrument'
+                : 'Instrument'}
+            </button>
+            {showInstruments && (
+              <div style={{ position: 'absolute', left: 0, top: 'calc(100% + 8px)', background: '#fff', color: '#111', borderRadius: 8, boxShadow: '0 6px 18px rgba(0,0,0,0.15)', minWidth: 200, maxHeight: 300, overflow: 'auto', zIndex: 1300 }}>
+                {tracks.length === 0 ? (
+                  <div style={{ padding: 12, color: '#666', fontSize: 13 }}>No instruments available</div>
+                ) : (
+                  tracks.map(t => (
+                    <div 
+                      key={t.idx} 
+                      style={{ 
+                        padding: '10px 14px', 
+                        cursor: 'pointer', 
+                        fontSize: 13,
+                        background: currentTrack === t.idx ? '#f3f4f6' : 'transparent',
+                        fontWeight: currentTrack === t.idx ? 600 : 400,
+                        borderBottom: '1px solid #f3f4f6'
+                      }}
+                      onClick={() => {
+                        setCurrentTrack(t.idx);
+                        window.dispatchEvent(new CustomEvent('select-track', { detail: { idx: t.idx } }));
+                        setShowInstruments(false);
+                      }}
+                    >
+                      {t.name}
+                    </div>
+                  ))
+                )}
               </div>
             )}
           </div>
-
-          {/* Instrument selection (smaller) */}
-          <label style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-            <div style={{ fontSize: 13 }}>Instrument:</div>
-            <select
-              value={currentTrack ?? ''}
-              onChange={e => {
-                const idx = parseInt(e.target.value, 10);
-                setCurrentTrack(Number.isNaN(idx) ? null : idx);
-                window.dispatchEvent(new CustomEvent('select-track', { detail: { idx } }));
-              }}
-              style={{ padding: '6px 8px', borderRadius: 6, background: '#0b1220', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', fontSize: 13, minWidth: 120 }}
-            >
-              <option value="">Instrument</option>
-              {tracks.map(t => <option key={t.idx} value={t.idx}>{t.name}</option>)}
-            </select>
-          </label>
         </div>
 
         {/* center overlay for Score + Intonation to ensure true visual centering */}
@@ -177,9 +291,271 @@ export default function TopRibbon() {
             )}
           </div>
           
-          <button style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}>Leaderboard</button>
+          <button style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', cursor: 'pointer' }}>Leaderboard</button>
         </div>
       </div>
+
+      {/* Song Selection Modal (centered) */}
+      {showSongModal && (
+        <>
+          {/* Backdrop */}
+          <div
+            style={{
+              position: 'fixed',
+              top: 0,
+              left: 0,
+              right: 0,
+              bottom: 0,
+              background: 'rgba(0, 0, 0, 0.7)',
+              zIndex: 9998,
+              animation: 'fadeIn 0.2s ease-out',
+            }}
+            onClick={() => setShowSongModal(false)}
+          />
+
+          {/* Modal */}
+          <div
+            style={{
+              position: 'fixed',
+              top: '50%',
+              left: '50%',
+              transform: 'translate(-50%, -50%)',
+              background: '#fff',
+              borderRadius: 16,
+              boxShadow: '0 20px 60px rgba(0,0,0,0.3)',
+              zIndex: 9999,
+              width: '90%',
+              maxWidth: 600,
+              maxHeight: '80vh',
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'slideUp 0.3s ease-out',
+            }}
+          >
+            {/* Header */}
+            <div style={{ padding: '24px 24px 16px', borderBottom: '1px solid #e5e7eb' }}>
+              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
+                <h2 style={{ margin: 0, fontSize: 24, fontWeight: 700, color: '#111' }}>Select a Song</h2>
+                <button
+                  onClick={() => setShowSongModal(false)}
+                  style={{
+                    background: 'none',
+                    border: 'none',
+                    fontSize: 24,
+                    cursor: 'pointer',
+                    color: '#666',
+                    padding: 0,
+                    width: 32,
+                    height: 32,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    borderRadius: 6,
+                  }}
+                >
+                  ×
+                </button>
+              </div>
+
+              {/* Tabs */}
+              <div style={{ display: 'flex', gap: 8 }}>
+                <button
+                  onClick={() => setSongTab('library')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: songTab === 'library' ? '#3b82f6' : '#f3f4f6',
+                    color: songTab === 'library' ? '#fff' : '#666',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  Song Library
+                </button>
+                <button
+                  onClick={() => setSongTab('uploads')}
+                  style={{
+                    padding: '8px 16px',
+                    borderRadius: 8,
+                    border: 'none',
+                    background: songTab === 'uploads' ? '#3b82f6' : '#f3f4f6',
+                    color: songTab === 'uploads' ? '#fff' : '#666',
+                    fontSize: 14,
+                    fontWeight: 600,
+                    cursor: 'pointer',
+                  }}
+                >
+                  My Uploads
+                </button>
+              </div>
+            </div>
+
+            {/* Content */}
+            <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
+              {songTab === 'library' ? (
+                <div>
+                  {songs.length === 0 ? (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
+                      <div style={{ fontSize: 48, marginBottom: 12 }}>🎵</div>
+                      <div style={{ fontSize: 16 }}>No songs found</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 8, paddingTop: 16 }}>
+                      {songs.map((s, i) => (
+                        <div
+                          key={i}
+                          style={{
+                            padding: '16px 20px',
+                            borderRadius: 10,
+                            background: '#f9fafb',
+                            cursor: 'pointer',
+                            transition: 'all 0.2s',
+                            border: '2px solid transparent',
+                          }}
+                          onClick={() => {
+                            window.dispatchEvent(new CustomEvent('load-song', { detail: { url: s.file } }));
+                            setShowSongModal(false);
+                          }}
+                          onMouseEnter={(e) => {
+                            e.currentTarget.style.background = '#eff6ff';
+                            e.currentTarget.style.borderColor = '#3b82f6';
+                          }}
+                          onMouseLeave={(e) => {
+                            e.currentTarget.style.background = '#f9fafb';
+                            e.currentTarget.style.borderColor = 'transparent';
+                          }}
+                        >
+                          <div style={{ fontSize: 16, fontWeight: 600, color: '#111' }}>
+                            {s.name}
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              ) : (
+                <div>
+                  {/* Upload Button */}
+                  <div style={{ padding: '16px 0', borderBottom: '1px solid #e5e7eb' }}>
+                    <input
+                      ref={fileInputRef}
+                      type="file"
+                      accept=".gp,.gp3,.gp4,.gp5,.gpx,.gtp"
+                      onChange={handleFileUpload}
+                      style={{ display: 'none' }}
+                      disabled={uploading}
+                    />
+                    <button
+                      onClick={() => fileInputRef.current?.click()}
+                      disabled={uploading}
+                      style={{
+                        width: '100%',
+                        padding: '12px 20px',
+                        borderRadius: 10,
+                        background: uploading ? '#9ca3af' : '#3b82f6',
+                        color: '#fff',
+                        border: 'none',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: uploading ? 'not-allowed' : 'pointer',
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        gap: 8,
+                      }}
+                    >
+                      {uploading ? '⏳ Uploading...' : '📤 Upload Guitar Pro File'}
+                    </button>
+                    {uploadError && (
+                      <div style={{ marginTop: 8, padding: '8px 12px', background: '#fee', color: '#c00', borderRadius: 6, fontSize: 13 }}>
+                        {uploadError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* User Uploads List */}
+                  {userUploads.length === 0 ? (
+                    <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
+                      <div style={{ fontSize: 48, marginBottom: 12 }}>🎸</div>
+                      <div style={{ fontSize: 16, marginBottom: 8 }}>No uploads yet</div>
+                      <div style={{ fontSize: 13 }}>Upload your first Guitar Pro file to get started</div>
+                    </div>
+                  ) : (
+                    <div style={{ display: 'grid', gap: 8, paddingTop: 16 }}>
+                      {userUploads.map((upload) => (
+                        <div
+                          key={upload.id}
+                          style={{
+                            padding: '16px 20px',
+                            borderRadius: 10,
+                            background: '#f9fafb',
+                            border: '2px solid transparent',
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                          }}
+                        >
+                          <div
+                            style={{ flex: 1, cursor: 'pointer' }}
+                            onClick={() => {
+                              window.dispatchEvent(new CustomEvent('load-song', { detail: { url: upload.filePath } }));
+                              setShowSongModal(false);
+                            }}
+                          >
+                            <div style={{ fontSize: 16, fontWeight: 600, color: '#111', marginBottom: 2 }}>
+                              {upload.songName}
+                            </div>
+                            <div style={{ fontSize: 13, color: '#666' }}>
+                              {upload.artist}
+                            </div>
+                          </div>
+                          <button
+                            onClick={(e) => {
+                              e.stopPropagation();
+                              handleDeleteUpload(upload.id);
+                            }}
+                            style={{
+                              padding: '6px 12px',
+                              borderRadius: 6,
+                              background: 'transparent',
+                              border: '1px solid #ef4444',
+                              color: '#ef4444',
+                              fontSize: 12,
+                              fontWeight: 600,
+                              cursor: 'pointer',
+                            }}
+                          >
+                            Delete
+                          </button>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              )}
+            </div>
+          </div>
+
+          <style jsx>{`
+            @keyframes fadeIn {
+              from { opacity: 0; }
+              to { opacity: 1; }
+            }
+            @keyframes slideUp {
+              from {
+                opacity: 0;
+                transform: translate(-50%, -45%);
+              }
+              to {
+                opacity: 1;
+                transform: translate(-50%, -50%);
+              }
+            }
+          `}</style>
+        </>
+      )}
     </>
   );
 }
