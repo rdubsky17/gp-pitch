@@ -38,21 +38,6 @@ export default function ProfilePanel() {
             View Your Scores
           </button>
           <button 
-            onClick={uploadSong}
-            style={{ 
-              marginTop: 8, 
-              padding: '8px 16px', 
-              borderRadius: 6, 
-              background: '#10b981', 
-              color: '#fff', 
-              border: 'none', 
-              cursor: 'pointer',
-              fontWeight: 600
-            }}
-          >
-            Upload Song
-          </button>
-          <button 
             onClick={logout}
             style={{ 
               marginTop: 8, 
