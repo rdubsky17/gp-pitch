@@ -447,13 +447,16 @@ export default function TabViewer({ fileUrl }: Props) {
   const handlePlay  = () => { 
     const a = apiRef.current; 
     try { 
-      // Reset score state before starting playback
-      window.dispatchEvent(new CustomEvent('reset-scorer'));
-      
       // Check if starting from beginning (position ~0)
       const timePos = typeof a.timePosition === 'function' ? a.timePosition() 
                     : typeof a.timePosition === 'number' ? a.timePosition : 0;
       const startedFromBeginning = timePos < 1; // within first second
+      
+      // Only reset score state when starting from beginning (not when resuming from pause)
+      if (startedFromBeginning) {
+        window.dispatchEvent(new CustomEvent('reset-scorer'));
+      }
+      
       window.dispatchEvent(new CustomEvent('playback-started', { 
         detail: { fromBeginning: startedFromBeginning } 
       }));
