@@ -227,8 +227,9 @@ export default function ProfilePanel() {
               <tr style={{ backgroundColor: '#f3f3f3' }}>
                 <th style={{ padding: '10px', borderBottom: '2px solid #ccc' }}>Song</th>
                 <th style={{ padding: '10px', borderBottom: '2px solid #ccc' }}>Artist</th>
-                <th style={{ padding: '10px', borderBottom: '2px solid #ccc' }}>Score</th>
                 <th style={{ padding: '10px', borderBottom: '2px solid #ccc' }}>Instrument</th>
+                <th style={{ padding: '10px', borderBottom: '2px solid #ccc' }}>Score</th>
+                <th style={{ padding: '10px', borderBottom: '2px solid #ccc' }}>Hits</th>
                 <th style={{ padding: '10px', borderBottom: '2px solid #ccc' }}>Date</th>
               </tr>
             </thead>
@@ -237,8 +238,9 @@ export default function ProfilePanel() {
                 <tr key={score.id} style={{ borderBottom: '1px solid #e0e0e0' }}>
                   <td style={{ padding: '8px', textAlign: 'center' }}>{score.track.songName}</td>
                   <td style={{ padding: '8px', textAlign: 'center' }}>{score.track.artist}</td>
-                  <td style={{ padding: '8px', textAlign: 'center' }}>{score.value}</td>
                   <td style={{ padding: '8px', textAlign: 'center' }}>{score.instrument}</td>
+                  <td style={{ padding: '8px', textAlign: 'center' }}>{score.value}</td>
+                  <td style={{ padding: '8px', textAlign: 'center' }}>{score.hits} / {score.total}</td>
                   <td style={{ padding: '8px', textAlign: 'center'}}>{new Date(score.createdAt).toLocaleDateString()}</td>
                 </tr>
               ))}
