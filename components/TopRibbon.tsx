@@ -3,6 +3,7 @@ import React, { useState, useRef, useEffect } from 'react';
 import { usePathname } from 'next/navigation';
 import SettingsPanel from './SettingsPanel';
 import ProfilePanel from './ProfilePanel';
+import LeaderboardPanel from './LeaderboardPanel';
 
 export default function TopRibbon() {
   const pathname = usePathname();
@@ -11,8 +12,10 @@ export default function TopRibbon() {
   const [showSettings, setShowSettings] = useState(false);
   const [showTracks, setShowTracks] = useState(false);
   const [showProfile, setShowProfile] = useState(false);
+  const [showLeaderboard, setShowLeaderboard] = useState(false);
   const ref = useRef<HTMLDivElement | null>(null);
   const profileRef = useRef<HTMLDivElement | null>(null);
+  const leaderRef = useRef<HTMLDivElement | null>(null);
 
   const [running, setRunning] = useState(false);
   const [status, setStatus] = useState('idle');
@@ -72,6 +75,9 @@ export default function TopRibbon() {
       }
       if (profileRef.current && !profileRef.current.contains(e.target as Node)) {
         setShowProfile(false);
+      }
+      if (leaderRef.current && !leaderRef.current.contains(e.target as Node)) {
+        setShowLeaderboard(false);
       }
     }
     document.addEventListener('click', onDoc);
@@ -176,8 +182,15 @@ export default function TopRibbon() {
               </div>
             )}
           </div>
-          
-          <button style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}>Leaderboard</button>
+          <div style={{position: 'relative'}} ref={leaderRef}>
+            <button style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}
+            onClick={() => setShowLeaderboard(v => !v)} aria-haspopup="true">Leaderboard</button>
+            {showLeaderboard && (
+              <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1300 }}>
+                <LeaderboardPanel/>
+              </div>
+            )}
+          </div>
         </div>
       </div>
     </>
