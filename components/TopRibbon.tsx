@@ -288,8 +288,9 @@ export default function TopRibbon() {
             )}
           </div>
 
+          {/* Profile button */}
           <div style={{ position: 'relative' }} ref={profileRef}>
-            <button onClick={() => setShowProfile(v => !v)} aria-haspopup="true" style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}>Profile</button>
+            <button onClick={() => setShowProfile(v => !v)} aria-haspopup="true" style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)',cursor: 'pointer' }}>Profile</button>
             {showProfile && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1300 }}>
                 <ProfilePanel />
