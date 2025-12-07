@@ -25,7 +25,7 @@ export default function TabViewer({ fileUrl }: Props) {
   const apiRef      = useRef<any>(null);
   const trackIdxRef = useRef<number | null>(null);
 
-  const { live, score } = usePitchScorer();
+  const { live, score, validity, validityRef, scoreRef, noteResults } = usePitchScorer();
 
   const [ready, setReady]         = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -69,10 +69,8 @@ export default function TabViewer({ fileUrl }: Props) {
     const host = hostRef.current;
     if (!vp || !host) return;
 
-    const el =
-      (host.querySelector('.at-cursor-beat') as HTMLElement) ||
-      (host.querySelector('.at-cursor-bar')  as HTMLElement) ||
-      (host.querySelector('.at-cursor')      as HTMLElement);
+    // Use the highlighted beat instead of cursor (since cursor is hidden)
+    const el = host.querySelector('.at-highlight') as HTMLElement;
 
     if (!el) return;
 
@@ -189,23 +187,104 @@ export default function TabViewer({ fileUrl }: Props) {
       setIsPlaying(!!playing);
     });
 
+    // Detect when song finishes naturally (not stopped manually)
+    api.playerFinished?.on?.(() => {
+      // Get the actual rendered track from the API
+      let instrumentName = 'Unknown Instrument';
+      
+      try {
+        // Use trackIdxRef as primary source of truth (updated when track is selected)
+        if (trackIdxRef.current !== null && api.score?.tracks) {
+          const track = api.score.tracks[trackIdxRef.current];
+          instrumentName = track?.name || 'Unknown Instrument';
+        }
+        // Fallback to trackIdx state variable
+        else if (trackIdx !== null && api.score?.tracks) {
+          const track = api.score.tracks[trackIdx];
+          instrumentName = track?.name || 'Unknown Instrument';
+        }
+        // Fallback to first track in score
+        else if (api.score?.tracks && api.score.tracks.length > 0) {
+          instrumentName = api.score.tracks[0]?.name || 'Unknown Instrument';
+        }
+      } catch (e) {
+        console.error('[TabViewer] Error getting track:', e);
+      }
+
+      // Get song name from filename
+      const songNameMap: Record<string, string> = {
+        '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 'Feel Good Inc.',
+        '/songs/Muse-Hysteria-09-20-2025.gp': 'Hysteria',
+        '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 'Aeroplane',
+        '/songs/Travis Scott-Sicko Mode-12-11-2024.gp': 'SICKO MODE',
+        '/songs/Fortnite-OG Lobby Theme-12-07-2024.gp': 'OG Lobby Theme',
+        '/songs/DaBaby feat. Roddy Ricch-Rockstar-08-01-2025.gp': 'Rockstar',
+      };
+      const songName = songNameMap[currentFile] || 'Unknown Song';
+
+      // Emit basic event for backward compatibility
+      window.dispatchEvent(new CustomEvent('song-finished'));
+
+      // Use refs to get latest values (avoid closure staleness)
+      const latestScore = scoreRef?.current || score;
+      const latestValidity = validityRef?.current || validity;
+
+      // Emit enriched event with all data needed for saving
+      window.dispatchEvent(new CustomEvent('song-finished-with-data', {
+        detail: {
+          score: latestScore,
+          validity: latestValidity,
+          currentFile,
+          trackName: instrumentName,
+          songName,
+        }
+      }));
+    });
+
     // --- Emit expected notes AND keep cursor in view ---
     api.playedBeatChanged?.on?.((beatOrArgs: any) => {
       const beat = beatOrArgs?.beat ?? beatOrArgs;
       const notesArr = Array.isArray(beat?.notes) ? beat.notes
                     : Array.isArray(beat?.beat?.notes) ? beat.beat.notes
                     : [];
+      
+      // Filter out ghost notes, dead notes, and extract pitches
       const pitches: number[] = notesArr
+        .filter((n: any) => {
+          // Skip ghost notes (grace notes shown in parentheses)
+          if (n?.isGhost === true) return false;
+          // Skip dead notes (muted/percussive notes marked with 'X')
+          if (n?.isDead === true) return false;
+          return true;
+        })
         .map((n: any) => n?.realValue)
         .filter((x: any) => typeof x === 'number' && isFinite(x));
+
+      // Send as nested array - single chord = [[60, 64, 67]], single note = [[60]]
+      const chords: number[][] = pitches.length > 0 ? [pitches] : [];
 
       const tSec =
         typeof api.timePosition === 'function' ? api.timePosition()
       : typeof api.timePosition === 'number'   ? api.timePosition
       : 0;
 
+      // Check if this is the first beat of the song (beat 1, bar 1)
+      // Beat objects have index property (0-based) and voice.bar.index
+      const beatIndex = beat?.index ?? beat?.beat?.index ?? -1;
+      const barIndex = beat?.voice?.bar?.index ?? beat?.beat?.voice?.bar?.index ?? -1;
+      const isFirstBeat = beatIndex === 0 && barIndex === 0;
+      
+      // Create a unique beat identifier: barIndex * 1000 + beatIndex
+      // This ensures each beat has a unique index across the entire song
+      const uniqueBeatIndex = barIndex >= 0 && beatIndex >= 0 ? barIndex * 1000 + beatIndex : -1;
+
+      // Store current beat info for coloring
+      previousBeatRef.current = barIndex >= 0 && beatIndex >= 0 
+        ? { barIndex, beatIndex, uniqueIndex: uniqueBeatIndex }
+        : null;
+
       window.dispatchEvent(new CustomEvent('tab-expected', {
-        detail: { tSec, pitches, xPx: beat?.x ?? 0 }
+        detail: { tSec, chords, xPx: beat?.x ?? 0, isFirstBeat, beatIndex: uniqueBeatIndex }
       }));
 
       // allow DOM to place the cursor first, then scroll
@@ -217,6 +296,19 @@ export default function TabViewer({ fileUrl }: Props) {
       requestAnimationFrame(ensureCursorVisible);
     });
 
+    // Detect when user clicks on beats/measures during playback (seeking)
+    api.beatMouseDown?.on?.(() => {
+      // Check if currently playing
+      const state = api.playerState ?? api.player?.state;
+      const code = typeof state === 'number' ? state : (state?.state ?? state?.playerState ?? state);
+      const playing = code === 1 || code === 'Playing' || code === 'playing';
+      
+      if (playing) {
+        // User clicked a measure while playing - this is seeking
+        window.dispatchEvent(new CustomEvent('seek-alpha'));
+      }
+    });
+
     return () => {
       try { api?.destroy?.(); } catch {}
       setTracks([]); setTrackIdx(null); setIsPlaying(false); setReady(false);
@@ -225,6 +317,123 @@ export default function TabViewer({ fileUrl }: Props) {
 
   // keep internal currentFile in sync if parent prop changes
   useEffect(() => { setCurrentFile(fileUrl); }, [fileUrl]);
+
+  // Keep trackIdxRef in sync with trackIdx state
+  useEffect(() => {
+    if (trackIdx !== null) {
+      trackIdxRef.current = trackIdx;
+    }
+  }, [trackIdx]);
+
+  // Track previous beat to apply colors after it's no longer highlighted
+  const previousBeatRef = useRef<{ barIndex: number; beatIndex: number; uniqueIndex: number } | null>(null);
+  const appliedColorsRef = useRef<Set<number>>(new Set()); // Track which beats we've already colored
+  const noteResultsRef = useRef(noteResults); // Ref for synchronous access in MutationObserver
+
+  // Keep ref in sync with state
+  useEffect(() => {
+    noteResultsRef.current = noteResults;
+  }, [noteResults]);
+
+  // Apply color classes to notes based on noteResults using MutationObserver
+  useEffect(() => {
+    if (!hostRef.current) return;
+
+    const host = hostRef.current;
+    
+    // Use MutationObserver to watch for class changes
+    const observer = new MutationObserver((mutations) => {
+      mutations.forEach((mutation) => {
+        if (mutation.type === 'attributes' && mutation.attributeName === 'class') {
+          const target = mutation.target as Element;
+          
+          const oldClasses = mutation.oldValue || '';
+          const hasHighlightNow = target.classList.contains('at-highlight');
+          const hadHighlightBefore = oldClasses.includes('at-highlight');
+          
+          // When highlight is ADDED, store the current beat index on the element
+          if (!hadHighlightBefore && hasHighlightNow && previousBeatRef.current) {
+            const uniqueBeatIndex = previousBeatRef.current.uniqueIndex;
+            target.setAttribute('data-beat-idx', String(uniqueBeatIndex));
+          }
+          
+          // When highlight is REMOVED, apply color based on stored beat index (with delay)
+          if (hadHighlightBefore && !hasHighlightNow) {
+            const beatIdxStr = target.getAttribute('data-beat-idx');
+            
+            if (beatIdxStr) {
+              const uniqueBeatIndex = parseInt(beatIdxStr, 10);
+              
+              // Wait a bit for noteResults to be updated (missed notes are marked when next beat starts)
+              setTimeout(() => {
+                // Use ref for synchronous access to latest noteResults
+                const currentNoteResults = noteResultsRef.current;
+                
+                if (currentNoteResults.has(uniqueBeatIndex) && !appliedColorsRef.current.has(uniqueBeatIndex)) {
+                  const beatNoteResults = currentNoteResults.get(uniqueBeatIndex)!;
+                  
+                  // Determine overall result for this beat
+                  // For chords: green if ANY note was hit correctly
+                  // For single notes: must be correct to be green
+                  let correctCount = 0;
+                  let totalCount = 0;
+                  beatNoteResults.forEach((result) => {
+                    totalCount++;
+                    if (result === 'correct') correctCount++;
+                  });
+                  
+                  // Apply color class to the element and its children
+                  // Green if at least one note was correct
+                  if (correctCount > 0) {
+                    target.classList.add('note-correct');
+                  } else if (totalCount > 0) {
+                    target.classList.add('note-incorrect');
+                  }
+                  
+                  // Mark this beat as colored
+                  appliedColorsRef.current.add(uniqueBeatIndex);
+                }
+              }, 50); // Small delay to allow missed notes to be marked
+              
+              // Clean up the data attribute (after delay)
+              setTimeout(() => target.removeAttribute('data-beat-idx'), 100);
+            }
+          }
+        }
+      });
+    });
+
+    // Observe the entire host for class changes
+    observer.observe(host, {
+      attributes: true,
+      attributeOldValue: true,
+      attributeFilter: ['class'],
+      subtree: true,
+    });
+
+    return () => observer.disconnect();
+  }, [noteResults]);
+
+  // Clear note colors when playback resets
+  useEffect(() => {
+    const clearColors = () => {
+      if (!hostRef.current) return;
+      const coloredNotes = hostRef.current.querySelectorAll('.note-correct, .note-incorrect');
+      coloredNotes.forEach((el) => {
+        el.classList.remove('note-correct', 'note-incorrect');
+      });
+      appliedColorsRef.current.clear();
+      previousBeatRef.current = null;
+    };
+
+    window.addEventListener('reset-scorer', clearColors);
+    window.addEventListener('load-song', clearColors);
+    
+    return () => {
+      window.removeEventListener('reset-scorer', clearColors);
+      window.removeEventListener('load-song', clearColors);
+    };
+  }, []);
 
   const onSelectTrack = (idxStr: string) => {
     const idx = parseInt(idxStr, 10);
@@ -235,7 +444,28 @@ export default function TabViewer({ fileUrl }: Props) {
     setTimeout(() => requestAnimationFrame(ensureCursorVisible), 0);
   };
 
-  const handlePlay  = () => { const a = apiRef.current; try { a?.play?.();  setIsPlaying(true);  requestAnimationFrame(ensureCursorVisible); } catch {} };
+  const handlePlay  = () => { 
+    const a = apiRef.current; 
+    try { 
+      // Check if starting from beginning (position ~0)
+      const timePos = typeof a.timePosition === 'function' ? a.timePosition() 
+                    : typeof a.timePosition === 'number' ? a.timePosition : 0;
+      const startedFromBeginning = timePos < 1; // within first second
+      
+      // Only reset score state when starting from beginning (not when resuming from pause)
+      if (startedFromBeginning) {
+        window.dispatchEvent(new CustomEvent('reset-scorer'));
+      }
+      
+      window.dispatchEvent(new CustomEvent('playback-started', { 
+        detail: { fromBeginning: startedFromBeginning } 
+      }));
+      
+      a?.play?.();  
+      setIsPlaying(true);  
+      requestAnimationFrame(ensureCursorVisible); 
+    } catch {} 
+  };
   const handlePause = () => { const a = apiRef.current; try { a?.pause?.(); setIsPlaying(false); } catch {} };
   const handleStop  = () => { const a = apiRef.current; try { a?.stop?.();  setIsPlaying(false); } catch {} };
 

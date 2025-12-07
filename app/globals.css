@@ -21,3 +21,80 @@ body {
 /* Smooth transitions for better UX */
 /* Keep styles simple — avoid site-wide transitions that cause unexpected effects */
 
+/* ---------- alphaTab safety net (forces readable, light paper) ---------- */
+.alphaTabCard {
+  /* lock the score area to light theme, regardless of :root vars */
+  --at-paper: #fff;
+  --at-ink: #111;
+
+  background: var(--at-paper) !important;
+  color: var(--at-ink) !important;
+}
+
+/* ensure all containers inside are also on "paper" */
+.alphaTabCard .at-wrap,
+.alphaTabCard .at-content {
+  background: var(--at-paper) !important;
+  color: var(--at-ink) !important;
+}
+
+/* alphaTab renders SVG; keep the canvas white */
+.alphaTabCard svg {
+  background: var(--at-paper) !important;
+}
+
+/* many builds hardcode black fills/strokes; remap them to our ink color */
+.alphaTabCard svg [stroke="#000"],
+.alphaTabCard svg [stroke="black"] {
+  stroke: var(--at-ink) !important;
+}
+.alphaTabCard svg [fill="#000"],
+.alphaTabCard svg [fill="black"] {
+  fill: var(--at-ink) !important;
+}
+
+/* prevent the “stretched first row” look by containing overflow */
+.alphaTabCard .at-wrap { position: relative; overflow: hidden; }
+.alphaTabCard .at-content { overflow: visible; }
+
+/* keep controls readable on any theme */
+:root { --at-controls-bg: #fff; }
+@media (prefers-color-scheme: dark) {
+  :root { --at-controls-bg: #111; /* control strip only; score stays white */ }
+}
+
+
+
+/* Optional: alphaTab top controls defaults */
+.at-controls button { color: #fff; }
+.at-controls select {
+  color: #fff;
+  background: #111;
+  border: 1px solid #666;
+}
+.at-controls option { color: #111; /* dropdown list text */ }
+
+/* Hide alphaTab cursor completely */
+.alphaTabCard .at-cursor,
+.alphaTabCard .at-cursor-bar,
+.alphaTabCard .at-cursor-beat {
+  display: none !important;
+}
+
+/* optional: highlight currently played noteheads (SVG renderer only) */
+.alphaTabCard .at-highlight * {
+  fill: #0a7cff !important;
+  stroke: #0a7cff !important;
+}
+
+/* Correct notes - green */
+.alphaTabCard .note-correct * {
+  fill: #10b981 !important;
+  stroke: #10b981 !important;
+}
+
+/* Incorrect/missed notes - red */
+.alphaTabCard .note-incorrect * {
+  fill: #ef4444 !important;
+  stroke: #ef4444 !important;
+}

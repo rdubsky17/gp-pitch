@@ -6,15 +6,18 @@
     "dev": "next dev --turbopack",
     "build": "next build --turbopack",
     "start": "next start",
-    "lint": "eslint"
+    "lint": "eslint",
+    "seed": "tsx seed.ts"
   },
   "dependencies": {
     "@coderline/alphatab": "^1.6.3",
     "@prisma/client": "^6.19.0",
+    "@types/nodemailer": "^7.0.4",
     "bcryptjs": "^3.0.2",
     "dotenv": "^17.2.3",
     "jose": "^6.1.2",
     "next": "15.5.4",
+    "nodemailer": "^7.0.11",
     "react": "19.1.0",
     "react-dom": "19.1.0"
   },

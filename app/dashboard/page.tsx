@@ -1,14 +1,11 @@
-'use client';
-import TabViewer from '@/components/TabViewer';
-
+import { Suspense } from 'react';
+import DashboardClient from './DashboardClient';
 
 export default function Page() {
   return (
-    <main style={{ display:'grid', gap:16, padding:16 }}>
-      <TabViewer fileUrl="/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp" />
-    </main>
+    <Suspense fallback={<div style={{ padding: 16 }}>Loading…</div>}>
+      <DashboardClient />
+    </Suspense>
   );
 }
 
-// public\songs\Gorillaz-Feel Good Inc.-09-23-2025.gp
-// public\songs\Red Hot Chili Peppers-Aeroplane-09-11-2025.gp

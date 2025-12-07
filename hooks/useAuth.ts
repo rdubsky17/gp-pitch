@@ -23,7 +23,6 @@ export function useAuth() {
         } else {
           setUser(null);
           if (response.status !== 401) {
-            // 401 is expected when not logged in, don't treat as error
             setError('Failed to fetch user data');
           }
         }
