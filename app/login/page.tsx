@@ -18,6 +18,7 @@ export default function LoginPage() {
   const [successMessage, setSuccessMessage] = useState<string>('');
   const [resetLink, setResetLink] = useState<string>('');
 
+  // "Sign in" button Handler
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault(); // prevent default actions
     setError(''); // reset error
@@ -57,7 +58,7 @@ export default function LoginPage() {
     }
   };
 
-
+  // "Forgot your password" button handler
   const handleForgotPassword = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoadingForgotPassword(true);
