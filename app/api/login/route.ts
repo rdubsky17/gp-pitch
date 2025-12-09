@@ -14,7 +14,7 @@ export async function POST(request: Request) {
       );
     }
 
-    // Find user by email using Prisma
+    // Find user by email in the Database using Prisma
     const user = await prisma.user.findUnique({
       where: { email },
       select: { id: true, username: true, email: true, password: true },

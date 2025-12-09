@@ -11,11 +11,16 @@ export default function SignUpPage() {
   const [isLoading, setIsLoading] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
 
+  // Client side validation
   const validateForm = () => {
     const newErrors: Record<string, string> = {};
 
     if (!username.trim()) {
       newErrors.username = 'Username is required';
+    } else if (username.length < 4 || username.length > 20) {
+      newErrors.username = 'Username must be 4-20 characters';
+    } else if (!/[A-Za-z][A-Za-z0-9_]*/.test(username)) {
+      newErrors.username = 'Username must start with a letter, and contain only letters, numbers, or underscrores';
     }
 
     if (!email.trim()) {
@@ -26,8 +31,12 @@ export default function SignUpPage() {
 
     if (!password) {
       newErrors.password = 'Password is required';
-    } else if (password.length < 6) {
-      newErrors.password = 'Password must be at least 6 characters';
+    } else if (password.length < 8) {
+      newErrors.password = 'Password must be at least 8 characters';
+    } else if (!/[A-Za-z]/.test(password)) {
+      newErrors.password = 'Password must contain at least one letter';
+    } else if (!/[0-9]/.test(password)) {
+      newErrors.password = 'Password must contain at least one number';
     }
 
     if (!confirmPassword) {
@@ -40,6 +49,7 @@ export default function SignUpPage() {
     return Object.keys(newErrors).length === 0;
   };
 
+  // Handle "Create account" button
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
 
