@@ -36,8 +36,14 @@ export default function ResetPasswordClient() {
       return;
     }
 
-    if (password.length < 6) {
-      setError('Password must be at least 6 characters long');
+    if (password.length < 8) {
+      setError('Password must be at least 8 characters long');
+      return;
+    } else if (!/[A-Za-z]/.test(password)) {
+      setError('Password must contain at least one letter');
+      return;
+    } else if (!/[0-9]/.test(password)) {
+      setError('Password must contain at least one number');
       return;
     }
 
