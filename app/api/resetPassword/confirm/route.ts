@@ -14,14 +14,24 @@ export async function POST(request: Request) {
       );
     }
 
-    if (newPassword.length < 6) {
+    if (newPassword.length < 8) {
       return NextResponse.json(
-        { error: 'Password must be at least 6 characters long' },
+        { error: 'Password must be at least 8 characters long' },
+        { status: 400 }
+      );
+    } else if (!/[A-Za-z]/.test(newPassword)) {
+      return NextResponse.json(
+        { error: 'Password must contain at least one letter' },
+        { status: 400 }
+      );
+    } else if (!/[0-9]/.test(newPassword)) {
+      return NextResponse.json(
+        { error: 'Password must contain at least one number' },
         { status: 400 }
       );
     }
 
-    // verify the reset token
+    // Verify the reset token
     const payload = await verifyToken(token);
 
     if (!payload) {
