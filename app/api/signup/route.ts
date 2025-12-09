@@ -32,9 +32,10 @@ export async function POST(request: Request) {
       );
     }
 
-    // email and username are not in db, create new user
+    // email and username are not in db, proceed to create new user
+
     const saltRounds = 10; // salt rounds for bcrypt
-    const hashedPassword = await bcrypt.hash(password, saltRounds);
+    const hashedPassword = await bcrypt.hash(password, saltRounds); // hasing password
 
     const newUser = await prisma.user.create({
         data: {email: email, username: username, password: hashedPassword},
