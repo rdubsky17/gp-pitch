@@ -15,7 +15,6 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const token = request.cookies.get('auth-token')?.value;
   
-  // Check for guest mode parameter
   const isGuestMode = request.nextUrl.searchParams.get('GuestView') === '1';
 
   // Check if user is authenticated
@@ -25,7 +24,7 @@ export async function middleware(request: NextRequest) {
       await jwtVerify(token, encodedKey, { algorithms: ['HS256'] });
       isAuthenticated = true;
     } catch (error) {
-      // Token is invalid or expired
+
       isAuthenticated = false;
     }
   }

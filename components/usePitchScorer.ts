@@ -69,6 +69,8 @@ export default function usePitchScorer() {
   const bufRef = useRef<Frame[]>([]);
   // cooldown to avoid double-awarding
   const cooldownRef = useRef<number>(0);
+  // Track last expected note for continuous intonation feedback
+  const lastTargetRef = useRef<number | null>(null);
   
   // Track current beat index for result recording
   const currentBeatIndexRef = useRef<number>(0);
@@ -124,6 +126,11 @@ export default function usePitchScorer() {
         }
       });
       pendingRef.current = m;
+      
+      // Store first expected note as last target for continuous intonation display
+      if (m.size > 0) {
+        lastTargetRef.current = Array.from(m.keys())[0];
+      }
 
       // Mark as started when first beat with notes arrives
       // Valid if: beat 1 bar 1, OR playback started from beginning (handles songs with initial rests)
@@ -150,18 +157,11 @@ export default function usePitchScorer() {
       // Reset per-beat state
       bufRef.current = [];
       cooldownRef.current = 0;
-      setLive({ err: 0, ok: false, target: null });
     };
 
     const onDetected = (e: Event) => {
       const { hz } = (e as CustomEvent).detail as { tSec: number; hz: number };
       const pending = pendingRef.current;
-
-      if (!pending || pending.size === 0) {
-        bufRef.current = [];
-        setLive({ err: 0, ok: false, target: null });
-        return;
-      }
 
       // If no valid pitch detected (threshold: 30 Hz), clear display
       // This prevents showing error values when no input or just noise is present
@@ -172,14 +172,39 @@ export default function usePitchScorer() {
         return;
       }
 
+      // If no pending notes, use last target to continue showing intonation
+      if (!pending || pending.size === 0) {
+        if (lastTargetRef.current !== null) {
+          const err = centsErr(hz, lastTargetRef.current); // Keep signed value
+          const okNow = Math.abs(err) <= tolerance;
+          
+          // Update sliding window for display stability
+          const now = performance.now();
+          bufRef.current.push({ t: now, ok: okNow, err: Math.abs(err), target: lastTargetRef.current });
+          if (bufRef.current.length > windowSize) bufRef.current.shift();
+          
+          const okCount = bufRef.current.reduce((a, b) => a + (b.ok ? 1 : 0), 0);
+          const stable = okCount >= needOK;
+          
+          setLive({ err, ok: stable, target: lastTargetRef.current });
+        } else {
+          bufRef.current = [];
+          setLive({ err: 0, ok: false, target: null });
+        }
+        return;
+      }
+
       // Choose nearest *still-pending* target (octave-agnostic)
       let bestTarget: number | null = null;
       let bestErr = Number.POSITIVE_INFINITY;
+      let bestSignedErr = 0;
 
       for (const midi of pending.keys()) {
-        const ce = Math.abs(centsErr(hz, midi)); // <-- folded into [-600,+600)
+        const signedErr = centsErr(hz, midi); // Keep signed value
+        const ce = Math.abs(signedErr);
         if (ce < bestErr) {
           bestErr = ce;
+          bestSignedErr = signedErr;
           bestTarget = midi;
         }
       }
@@ -201,7 +226,7 @@ export default function usePitchScorer() {
       const okCount = bufRef.current.reduce((a, b) => a + (b.ok ? 1 : 0), 0);
       const stable = okCount >= needOK;
 
-      setLive({ err: bestErr, ok: stable, target: bestTarget });
+      setLive({ err: bestSignedErr, ok: stable, target: bestTarget });
 
       // Award one note when we first reach stability for a pending target
       if (stable && now >= cooldownRef.current) {
@@ -278,6 +303,7 @@ export default function usePitchScorer() {
       cooldownRef.current = 0;
       startedFromBeginningRef.current = false;
       currentBeatIndexRef.current = 0;
+      lastTargetRef.current = null;
       setLive({ err: 0, ok: false, target: null });
       setScore({ hits: 0, total: 0 });
       setNoteResults(new Map());

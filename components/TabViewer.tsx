@@ -417,13 +417,16 @@ export default function TabViewer({ fileUrl }: Props) {
   // Clear note colors when playback resets
   useEffect(() => {
     const clearColors = () => {
-      if (!hostRef.current) return;
-      const coloredNotes = hostRef.current.querySelectorAll('.note-correct, .note-incorrect');
-      coloredNotes.forEach((el) => {
-        el.classList.remove('note-correct', 'note-incorrect');
-      });
       appliedColorsRef.current.clear();
       previousBeatRef.current = null;
+      
+      // Force alphaTab to re-render to ensure all DOM elements are fresh
+      const api = apiRef.current;
+      if (api && trackIdxRef.current !== null) {
+        setTimeout(() => {
+          renderSelectedTrack(trackIdxRef.current!);
+        }, 0);
+      }
     };
 
     window.addEventListener('reset-scorer', clearColors);

@@ -198,7 +198,17 @@ export default function TopRibbon() {
           {/* Song selection button - opens centered modal */}
           <button 
             onClick={() => setShowSongModal(true)} 
-            style={{ padding: '6px 12px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+            style={{ 
+              padding: '8px 14px', 
+              borderRadius: 10, 
+              background: 'rgba(255, 255, 255, 0.1)', 
+              backdropFilter: 'blur(10px)',
+              color: '#fff', 
+              border: '1px solid rgba(255, 255, 255, 0.2)', 
+              fontSize: 14, 
+              fontWeight: 600, 
+              cursor: 'pointer' 
+            }}
           >
             Song Selection
           </button>
@@ -207,7 +217,17 @@ export default function TopRibbon() {
           <div style={{ position: 'relative' }} ref={instrumentRef}>
             <button 
               onClick={() => setShowInstruments(v => !v)} 
-              style={{ padding: '6px 12px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)', fontSize: 13, fontWeight: 500, cursor: 'pointer' }}
+              style={{ 
+                padding: '8px 14px', 
+                borderRadius: 10, 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                backdropFilter: 'blur(10px)',
+                color: '#fff', 
+                border: '1px solid rgba(255, 255, 255, 0.2)', 
+                fontSize: 14, 
+                fontWeight: 600, 
+                cursor: 'pointer' 
+              }}
             >
               {currentTrack !== null && tracks.length > 0 
                 ? tracks.find(t => t.idx === currentTrack)?.name || 'Instrument'
@@ -245,16 +265,62 @@ export default function TopRibbon() {
         </div>
 
         {/* center overlay for Score + Intonation to ensure true visual centering */}
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 18, alignItems: 'center', color: '#fff', fontSize: 14, pointerEvents: 'none' }}>
-          <div>
-            <strong>Score:</strong>{' '}
-            <span style={{ fontVariantNumeric: 'tabular-nums' }}>{scoreState.hits}/{scoreState.total}</span>
+        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 16, alignItems: 'center', color: '#fff', fontSize: 14, pointerEvents: 'none' }}>
+          <div style={{ 
+            background: 'rgba(255, 255, 255, 0.1)', 
+            backdropFilter: 'blur(10px)',
+            padding: '10px 16px', 
+            borderRadius: 10, 
+            border: '1px solid rgba(255, 255, 255, 0.1)',
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8
+          }}>
+            <strong style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600 }}>Score:</strong>
+            <span style={{ 
+              fontVariantNumeric: 'tabular-nums', 
+              fontSize: 16, 
+              fontWeight: 700,
+              color: '#fff'
+            }}>{scoreState.hits}/{scoreState.total}</span>
+            <span style={{ 
+              fontSize: 12, 
+              color: 'rgba(255, 255, 255, 0.6)',
+              marginLeft: 4
+            }}>({scoreState.total > 0 ? Math.round((scoreState.hits / scoreState.total) * 100) : 0}%)</span>
           </div>
-          <div>
-            <strong>Intonation:</strong>{' '}
-            {liveState.target !== null
-              ? <span style={{ fontVariantNumeric: 'tabular-nums' }}>{Math.round(liveState.err)} cents {liveState.ok ? '✅' : '❌'}</span>
-              : '—'}
+          <div style={{ 
+            background: liveState.ok ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', 
+            backdropFilter: 'blur(10px)',
+            padding: '10px 16px', 
+            borderRadius: 10, 
+            border: `1px solid ${liveState.ok ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
+            display: 'flex',
+            alignItems: 'center',
+            gap: 8,
+            minWidth: '210px',
+            minHeight: '48px'
+          }}>
+            <strong style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600 }}>Intonation:</strong>
+            {liveState.target !== null && (
+              <>
+                <span style={{ 
+                  fontVariantNumeric: 'tabular-nums',
+                  fontSize: 16,
+                  fontWeight: 700,
+                  color: liveState.ok ? '#10b981' : '#ef4444',
+                  display: 'inline-block',
+                  minWidth: '48px',
+                  textAlign: 'right',
+                  lineHeight: '24px'
+                }}>{liveState.err > 0 ? '+' : ''}{Math.round(liveState.err)}</span>
+                <span style={{ 
+                  fontSize: 14, 
+                  color: 'rgba(255, 255, 255, 0.7)',
+                  lineHeight: '24px'
+                }}>cents</span>
+              </>
+            )}
           </div>
         </div>
 
@@ -276,11 +342,36 @@ export default function TopRibbon() {
               style={{ padding: '8px 14px', borderRadius: 10, background: isPlaying ? '#ef4444' : '#10b981', border: 'none', color: '#fff', fontWeight: 700 }}
             >{isPlaying ? 'Stop' : 'Start'}</button>
 
-            <button onClick={() => window.dispatchEvent(new CustomEvent('pause-alpha'))} style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}>Pause</button>
+            <button 
+              onClick={() => window.dispatchEvent(new CustomEvent('pause-alpha'))} 
+              style={{ 
+                padding: '8px 14px', 
+                borderRadius: 10, 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                backdropFilter: 'blur(10px)',
+                color: '#fff', 
+                border: '1px solid rgba(255, 255, 255, 0.2)', 
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >Pause</button>
           </div>
           {/* keep settings/profile/leaderboard compact on the right side */}
           <div style={{ position: 'relative' }} ref={ref}>
-            <button onClick={() => setShowSettings(v => !v)} aria-haspopup="true" style={{ padding: '8px 12px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}>Input Settings</button>
+            <button 
+              onClick={() => setShowSettings(v => !v)} 
+              aria-haspopup="true" 
+              style={{ 
+                padding: '8px 14px', 
+                borderRadius: 10, 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                backdropFilter: 'blur(10px)',
+                color: '#fff', 
+                border: '1px solid rgba(255, 255, 255, 0.2)', 
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >Input Settings</button>
             {showSettings && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)' }}>
                 <SettingsPanel />
@@ -290,7 +381,20 @@ export default function TopRibbon() {
 
           {/* Profile button */}
           <div style={{ position: 'relative' }} ref={profileRef}>
-            <button onClick={() => setShowProfile(v => !v)} aria-haspopup="true" style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)',cursor: 'pointer' }}>Profile</button>
+            <button 
+              onClick={() => setShowProfile(v => !v)} 
+              aria-haspopup="true" 
+              style={{ 
+                padding: '8px 14px', 
+                borderRadius: 10, 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                backdropFilter: 'blur(10px)',
+                color: '#fff', 
+                border: '1px solid rgba(255, 255, 255, 0.2)', 
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >Profile</button>
             {showProfile && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1300 }}>
                 <ProfilePanel />
@@ -298,8 +402,20 @@ export default function TopRibbon() {
             )}
           </div>
           <div style={{position: 'relative'}} ref={leaderRef}>
-            <button style={{ padding: '8px 10px', borderRadius: 8, background: 'transparent', color: '#fff', border: '1px solid rgba(255,255,255,0.06)' }}
-            onClick={() => setShowLeaderboard(v => !v)} aria-haspopup="true">Leaderboard</button>
+            <button 
+              onClick={() => setShowLeaderboard(v => !v)} 
+              aria-haspopup="true"
+              style={{ 
+                padding: '8px 14px', 
+                borderRadius: 10, 
+                background: 'rgba(255, 255, 255, 0.1)', 
+                backdropFilter: 'blur(10px)',
+                color: '#fff', 
+                border: '1px solid rgba(255, 255, 255, 0.2)', 
+                fontWeight: 600,
+                cursor: 'pointer'
+              }}
+            >Leaderboard</button>
             {showLeaderboard && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1300 }}>
                 <LeaderboardPanel/>
