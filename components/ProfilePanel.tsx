@@ -31,8 +31,6 @@ export default function ProfilePanel() {
   const [viewScoresModal, setViewScoresModal] = useState(false);
   const [scoresTab, setScoresTab] = useState<'lastScores' | 'scoresBySong'>('lastScores'); // for tabs in score modal
 
-  const [songs, setSongs] = useState<Array<{ name: string; file: string }>>([]); 
-  const [userUploads, setUserUploads] = useState<Array<{ id: number; songName: string; artist: string; filePath: string }>>([]);
   const [scores, setScores] = useState<Score[]>([]); // scores for all songs
   const [tracks, setTracks] = useState<Track[]>([]); // for all user tracks including defaults
 
@@ -46,6 +44,7 @@ export default function ProfilePanel() {
     }
   }, [viewScoresModal, scoresTab]);
 
+  // Fetch user scores and store last 20 scores in "scores"
   const fetchScores = async () => {
     try {
       const res = await fetch('/api/scores');
@@ -60,13 +59,14 @@ export default function ProfilePanel() {
     }    
   };
 
-  // Fetch user songs when songs tab is opened
+  // Fetch user songs when "Scores by Song" tab is opened
   useEffect(() => {
     if (viewScoresModal && scoresTab === 'scoresBySong') {
       fetchUserSongs();
     }
   }, [viewScoresModal, scoresTab]);
 
+  // Fetch user songs from default library and from user uploads
   const fetchUserSongs = async () => {
     try {
       const [songsRes, uploadsRes] = await Promise.all([
@@ -77,6 +77,7 @@ export default function ProfilePanel() {
       let libraryTracks: Track[] = [];
       let uploadTracks: Track[] = [];
 
+      // Library tracks processing
       if (songsRes.ok) {
         const songsData = await songsRes.json();
         const songsArray = Array.isArray(songsData) ? songsData : [];
@@ -88,6 +89,7 @@ export default function ProfilePanel() {
         }))
       }
 
+      // User uploaded tracks
       if (uploadsRes.ok) {
         const uploadsData = await uploadsRes.json();
         const uploadsArray = uploadsData.tracks || [];
@@ -98,14 +100,13 @@ export default function ProfilePanel() {
           source: 'upload' as const,
         }));
       }
-
       setTracks([...libraryTracks, ...uploadTracks]);
     } catch (error) {
       console.error('Failed to fetch songs:', error);
     }
   };
 
-  // Fetch scores for selected song
+  // Fetch scores for one selected song by trackId
   const fetchScoresForSong = async (trackId: number) => {
     try {
       const res = await fetch(`/api/scores?trackId=${trackId}`);
@@ -119,7 +120,7 @@ export default function ProfilePanel() {
     }
   };
 
-  // Click on song handler
+  // Click on song handler (for better UI)
   const handleSongClick = (trackId: number) => {
     if (selectedSong === trackId) {
       setSelectedSong(null);
@@ -135,7 +136,7 @@ export default function ProfilePanel() {
     <div style={{ padding: 12, background: '#fff', color: '#111', 
                   borderRadius: 6, boxShadow: '0 6px 18px rgba(0,0,0,0.15)', 
                   minWidth: 300 }}>
-      
+
     {loading ? (
         <p>Loading...</p>
       ) : user ? (
@@ -143,6 +144,8 @@ export default function ProfilePanel() {
           <div>
             <div style={{fontWeight: 700, textAlign: 'center', fontSize: 20, paddingTop: 10}}>Hello, {user.username}!</div>
           </div>
+
+          {/* View Scores button */}
           <button 
             onClick={() => setViewScoresModal(true)}
             style={{ 
@@ -167,6 +170,7 @@ export default function ProfilePanel() {
             View Your Scores
           </button>
 
+          {/* Logout button */}
           <button 
             onClick={logout}
             style={{ 
@@ -275,6 +279,8 @@ export default function ProfilePanel() {
 
       {/* Tabs */}
       <div style={{ display: 'flex', gap: 8 }}>
+
+        {/* Last Scores button */}
         <button
           onClick={() => setScoresTab('lastScores')}
           style={{
@@ -291,6 +297,7 @@ export default function ProfilePanel() {
           Last Scores
         </button>
 
+        {/* Scores by Songs button */}
         <button
           onClick={() => setScoresTab('scoresBySong')}
           style={{
