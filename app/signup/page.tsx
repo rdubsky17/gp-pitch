@@ -19,7 +19,7 @@ export default function SignUpPage() {
       newErrors.username = 'Username is required';
     } else if (username.length < 4 || username.length > 20) {
       newErrors.username = 'Username must be 4-20 characters';
-    } else if (!/[A-Za-z][A-Za-z0-9_]*/.test(password)) {
+    } else if (!/[A-Za-z][A-Za-z0-9_]*/.test(username)) {
       newErrors.username = 'Username must start with a letter, and contain only letters, numbers, or underscrores';
     }
 

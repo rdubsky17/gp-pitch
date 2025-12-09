@@ -6,6 +6,36 @@ export async function POST(request: Request) {
   try {
     const { username, email, password } = await request.json();
 
+    // Username validation
+    if (!username || username.length < 4 || username.length > 20) {
+      return NextResponse.json(
+        { error: 'Username must be 4-20 characters' },
+        { status: 400 }
+      );
+    }
+
+    if (!/^[A-Za-z][A-Za-z0-9_]*$/.test(username)) {
+      return NextResponse.json(
+        { error: 'Username must start with a letter and use only letters, digits, underscores' },
+        { status: 400 }
+      );
+    }
+
+    // Password validation
+    if (!password || password.length < 8) {
+      return NextResponse.json(
+        { error: 'Password must be at least 8 characters' },
+        { status: 400 }
+      );
+    }
+
+    if (!/[A-Za-z]/.test(password) || !/[0-9]/.test(password)) {
+      return NextResponse.json(
+        { error: 'Password must include at least one letter and one number' },
+        { status: 400 }
+      );
+    }
+
     // check if this email exists in db
     const existing_email = await prisma.user.findUnique({
       where: { email },
