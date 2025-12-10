@@ -1,6 +1,5 @@
 'use client';
 import React, { useEffect, useState } from 'react'
-import LeaderboardSlot from './LeaderboardSlot';
 import { userAgent } from 'next/server';
 
 interface track {
