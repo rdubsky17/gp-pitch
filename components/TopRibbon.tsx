@@ -302,7 +302,7 @@ export default function TopRibbon() {
             onClick={() => setShowLeaderboard(v => !v)} aria-haspopup="true">Leaderboard</button>
             {showLeaderboard && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1300 }}>
-                <LeaderboardPanel/>
+                <LeaderboardPanel trackId={currentTrack} instrumentName={tracks.find(t => t.idx === currentTrack)?.name}/>
               </div>
             )}
           </div>
