@@ -33,13 +33,6 @@ export async function GET(req: NextRequest) {
                         id: true,
                         username: true
                     }
-                },
-                track: {
-                    select: {
-                        id: true,
-                        songName: true,
-                        artist: true
-                    }
                 }
             },
             orderBy: {

@@ -472,8 +472,10 @@ export default function TabViewer({ fileUrl }: Props) {
   const controlsDisabled = !ready || tracks.length === 0;
   // Broadcast tab status for TopRibbon to consume
   useEffect(() => {
-    window.dispatchEvent(new CustomEvent('tab-status', { detail: { score, live, isPlaying, tracks, trackIdx } }));
-  }, [score, live, isPlaying, tracks, trackIdx]);
+  window.dispatchEvent(new CustomEvent('tab-status', { 
+    detail: { score, live, isPlaying, tracks, trackIdx, currentFile } 
+  }));
+}, [score, live, isPlaying, tracks, trackIdx, currentFile]);
 
   return (
     <div className="alphaTabCard" style={{ display:'grid', gap:12, position:'relative' }}>
