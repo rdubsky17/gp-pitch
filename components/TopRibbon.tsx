@@ -34,6 +34,7 @@ export default function TopRibbon() {
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
+  const [currentFile, setCurrentFile] = useState<string>('');
 
   // Listen for pitch status events from PitchMeter
   // Re-run when `hideOnLogin` changes so listeners are attached after navigation
@@ -53,6 +54,7 @@ export default function TopRibbon() {
       if (typeof d.isPlaying === 'boolean') setIsPlaying(d.isPlaying);
       if (Array.isArray(d.tracks)) setTracks(d.tracks);
       if (typeof d.trackIdx === 'number') setCurrentTrack(d.trackIdx);
+      if (typeof d.currentFile === 'string') setCurrentFile(d.currentFile);
     };
     window.addEventListener('tab-status', onTab as EventListener);
     // fetch songs manifest for Songs popout
@@ -187,6 +189,18 @@ export default function TopRibbon() {
 
   // If we're on the login page, don't render anything (hooks ran but effects were noop)
   if (hideOnLogin) return null;
+
+  function getTrackIdFromFile(filePath: string): number | null {
+    const fileToTrackId: Record<string, number> = {
+      '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 1,
+      '/songs/Muse-Hysteria-09-20-2025.gp': 2,
+      '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 3,
+      '/songs/Travis Scott-Sicko Mode-12-11-2024.gp': 4,
+      '/songs/Fortnite-OG Lobby Theme-12-07-2024.gp': 5,
+      '/songs/DaBaby feat. Roddy Ricch-Rockstar-08-01-2025.gp': 6,
+    };
+    return fileToTrackId[filePath] ?? null;
+  }
 
   return (
     <>
@@ -418,7 +432,7 @@ export default function TopRibbon() {
             >Leaderboard</button>
             {showLeaderboard && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1300 }}>
-                <LeaderboardPanel/>
+                <LeaderboardPanel trackId={getTrackIdFromFile(currentFile)} instrumentName={tracks.find(t => t.idx === currentTrack)?.name}/>
               </div>
             )}
           </div>
