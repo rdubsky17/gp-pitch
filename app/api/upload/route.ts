@@ -73,7 +73,7 @@ export async function POST(req: NextRequest) {
     const sanitizedFilename = file.name.replace(/[^a-zA-Z0-9.-]/g, '_');
     const filename = `${timestamp}-${sanitizedFilename}`;
     const filepath = join(uploadDir, filename);
-    const relativeFilePath = `/uploads/user-${userId}/${filename}`;
+    const relativeFilePath = `/api/files/user-${userId}/${filename}`;
 
     // Save file
     const bytes = await file.arrayBuffer();
