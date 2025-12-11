@@ -216,9 +216,11 @@ export default function TabViewer({ fileUrl }: Props) {
         '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 'Feel Good Inc.',
         '/songs/Muse-Hysteria-09-20-2025.gp': 'Hysteria',
         '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 'Aeroplane',
-        '/songs/Travis Scott-Sicko Mode-12-11-2024.gp': 'SICKO MODE',
-        '/songs/Fortnite-OG Lobby Theme-12-07-2024.gp': 'OG Lobby Theme',
-        '/songs/DaBaby feat. Roddy Ricch-Rockstar-08-01-2025.gp': 'Rockstar',
+        '/songs/Jackson 5-I Want You Back-11-19-2025.gp': 'I Want You Back',
+        '/songs/Radiohead-Creep-12-05-2025.gp': 'Creep',
+        '/songs/Pink Floyd-Money-10-26-2025.gp': 'Money',
+        '/songs/Red Hot Chili Peppers-Dark Necessities-08-25-2025.gp': 'Dark Necessities',
+        "/songs/Red Hot Chili Peppers-Can't Stop-12-10-2025.gp": "Can't Stop",
       };
       const songName = songNameMap[currentFile] || 'Unknown Song';
 

@@ -157,9 +157,11 @@ function getTrackIdFromFile(filePath: string): number | null {
     '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 1,
     '/songs/Muse-Hysteria-09-20-2025.gp': 2,
     '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 3,
-    '/songs/Travis Scott-Sicko Mode-12-11-2024.gp': 4,
-    '/songs/Fortnite-OG Lobby Theme-12-07-2024.gp': 5,
-    '/songs/DaBaby feat. Roddy Ricch-Rockstar-08-01-2025.gp': 6,
+    '/songs/Jackson 5-I Want You Back-11-19-2025.gp': 4,
+    '/songs/Radiohead-Creep-12-05-2025.gp': 5,
+    '/songs/Pink Floyd-Money-10-26-2025.gp': 6,
+    '/songs/Red Hot Chili Peppers-Dark Necessities-08-25-2025.gp': 7,
+    "/songs/Red Hot Chili Peppers-Can't Stop-12-10-2025.gp": 8,
   };
 
   return fileToTrackId[filePath] ?? null;

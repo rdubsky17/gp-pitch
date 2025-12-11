@@ -22,9 +22,11 @@ async function main() {
 		{ id: 1, songName: 'Feel Good Inc.', artist: 'Gorillaz', filePath: '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp', isUserUpload: false },
 		{ id: 2, songName: 'Hysteria', artist: 'Muse', filePath: '/songs/Muse-Hysteria-09-20-2025.gp', isUserUpload: false },
 		{ id: 3, songName: 'Aeroplane', artist: 'Red Hot Chili Peppers', filePath: '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp', isUserUpload: false },
-		{ id: 4, songName: 'SICKO MODE', artist: 'Travis Scott', filePath: '/songs/Travis Scott-Sicko Mode-12-11-2024.gp', isUserUpload: false },
-		{ id: 5, songName: 'OG Lobby Theme', artist: 'Fortnite', filePath: '/songs/Fortnite-OG Lobby Theme-12-07-2024.gp', isUserUpload: false },
-		{ id: 6, songName: 'Rockstar', artist: 'DaBaby feat. Roddy Ricch', filePath: '/songs/DaBaby feat. Roddy Ricch-Rockstar-08-01-2025.gp', isUserUpload: false },
+		{ id: 4, songName: 'I Want You Back', artist: 'Jackson 5', filePath: '/songs/Jackson 5-I Want You Back-11-19-2025.gp', isUserUpload: false },
+		{ id: 5, songName: 'Creep', artist: 'Radiohead', filePath: '/songs/Radiohead-Creep-12-05-2025.gp', isUserUpload: false },
+		{ id: 6, songName: 'Money', artist: 'Pink Floyd', filePath: '/songs/Pink Floyd-Money-10-26-2025.gp', isUserUpload: false },
+		{ id: 7, songName: 'Dark Necessities', artist: 'Red Hot Chili Peppers', filePath: '/songs/Red Hot Chili Peppers-Dark Necessities-08-25-2025.gp', isUserUpload: false },
+		{ id: 8, songName: "Can't Stop", artist: 'Red Hot Chili Peppers', filePath: "/songs/Red Hot Chili Peppers-Can't Stop-12-10-2025.gp", isUserUpload: false },
 	];
 
 	for (const track of tracks) {
