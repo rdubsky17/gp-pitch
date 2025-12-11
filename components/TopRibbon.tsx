@@ -207,26 +207,27 @@ export default function TopRibbon() {
   return (
     <>
       <div style={{ height: 'var(--top-ribbon-h, 50px)' }} />
-      <div style={{ position: 'fixed', left: 0, right: 0, top: 0, zIndex: 1100, background: 'black', color: '#fff', boxShadow: '0 8px 24px rgba(2,6,23,0.6)', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <div style={{ display: 'flex', alignItems: 'center', gap: 12, zIndex: 1200 }}>
-          <div style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.6, background: 'linear-gradient(135deg,#6ee7b7,#3b82f6)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent'}}>Guitar Tabs</div>
+      <div style={{ position: 'fixed', left: 0, right: 0, top: 0, zIndex: 1100, background: 'black', color: '#fff', boxShadow: '0 8px 24px rgba(2,6,23,0.6)', padding: '10px 18px', display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap', minHeight: '50px' }}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8, zIndex: 1200, flexShrink: 0 }}>
+          <div style={{ fontWeight: 800, fontSize: 20, letterSpacing: 0.6, background: 'linear-gradient(135deg,#6ee7b7,#3b82f6)', WebkitBackgroundClip: 'text', backgroundClip: 'text', WebkitTextFillColor: 'transparent', whiteSpace: 'nowrap'}}>Guitar Tabs</div>
 
           {/* Song selection button - opens centered modal */}
           <button 
             onClick={() => setShowSongModal(true)} 
             style={{ 
-              padding: '8px 14px', 
+              padding: '8px 12px', 
               borderRadius: 10, 
               background: 'rgba(255, 255, 255, 0.1)', 
               backdropFilter: 'blur(10px)',
               color: '#fff', 
               border: '1px solid rgba(255, 255, 255, 0.2)', 
-              fontSize: 14, 
+              fontSize: 13, 
               fontWeight: 600, 
-              cursor: 'pointer' 
+              cursor: 'pointer',
+              whiteSpace: 'nowrap'
             }}
           >
-            Song Selection
+            Songs
           </button>
 
           {/* Instrument selection dropdown (mimics song selection style) */}
@@ -234,15 +235,19 @@ export default function TopRibbon() {
             <button 
               onClick={() => setShowInstruments(v => !v)} 
               style={{ 
-                padding: '8px 14px', 
+                padding: '8px 12px', 
                 borderRadius: 10, 
                 background: 'rgba(255, 255, 255, 0.1)', 
                 backdropFilter: 'blur(10px)',
                 color: '#fff', 
                 border: '1px solid rgba(255, 255, 255, 0.2)', 
-                fontSize: 14, 
+                fontSize: 13, 
                 fontWeight: 600, 
-                cursor: 'pointer' 
+                cursor: 'pointer',
+                whiteSpace: 'nowrap',
+                maxWidth: '150px',
+                overflow: 'hidden',
+                textOverflow: 'ellipsis'
               }}
             >
               {currentTrack !== null && tracks.length > 0 
@@ -280,69 +285,66 @@ export default function TopRibbon() {
           </div>
         </div>
 
-        {/* center overlay for Score + Intonation to ensure true visual centering */}
-        <div style={{ position: 'absolute', left: '50%', transform: 'translateX(-50%)', display: 'flex', gap: 16, alignItems: 'center', color: '#fff', fontSize: 14, pointerEvents: 'none' }}>
+        {/* Score + Intonation - now using flex instead of absolute positioning */}
+        <div style={{ display: 'flex', gap: 8, alignItems: 'center', color: '#fff', fontSize: 13, flex: '1 1 auto', justifyContent: 'center', minWidth: 0 }}>
           <div style={{ 
             background: 'rgba(255, 255, 255, 0.1)', 
             backdropFilter: 'blur(10px)',
-            padding: '10px 16px', 
+            padding: '8px 12px', 
             borderRadius: 10, 
             border: '1px solid rgba(255, 255, 255, 0.1)',
             display: 'flex',
             alignItems: 'center',
-            gap: 8
+            gap: 6,
+            whiteSpace: 'nowrap'
           }}>
             <strong style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600 }}>Score:</strong>
             <span style={{ 
               fontVariantNumeric: 'tabular-nums', 
-              fontSize: 16, 
+              fontSize: 14, 
               fontWeight: 700,
               color: '#fff'
             }}>{scoreState.hits}/{scoreState.total}</span>
             <span style={{ 
-              fontSize: 12, 
-              color: 'rgba(255, 255, 255, 0.6)',
-              marginLeft: 4
+              fontSize: 11, 
+              color: 'rgba(255, 255, 255, 0.6)'
             }}>({scoreState.total > 0 ? Math.round((scoreState.hits / scoreState.total) * 100) : 0}%)</span>
           </div>
           <div style={{ 
             background: liveState.ok ? 'rgba(16, 185, 129, 0.15)' : 'rgba(239, 68, 68, 0.15)', 
             backdropFilter: 'blur(10px)',
-            padding: '10px 16px', 
+            padding: '8px 12px', 
             borderRadius: 10, 
             border: `1px solid ${liveState.ok ? 'rgba(16, 185, 129, 0.3)' : 'rgba(239, 68, 68, 0.3)'}`,
             display: 'flex',
             alignItems: 'center',
-            gap: 8,
-            minWidth: '210px',
-            minHeight: '48px'
+            gap: 6,
+            whiteSpace: 'nowrap'
           }}>
             <strong style={{ color: 'rgba(255, 255, 255, 0.8)', fontWeight: 600 }}>Intonation:</strong>
             {liveState.target !== null && (
               <>
                 <span style={{ 
                   fontVariantNumeric: 'tabular-nums',
-                  fontSize: 16,
+                  fontSize: 14,
                   fontWeight: 700,
                   color: liveState.ok ? '#10b981' : '#ef4444',
                   display: 'inline-block',
-                  minWidth: '48px',
-                  textAlign: 'right',
-                  lineHeight: '24px'
+                  minWidth: '40px',
+                  textAlign: 'right'
                 }}>{liveState.err > 0 ? '+' : ''}{Math.round(liveState.err)}</span>
                 <span style={{ 
-                  fontSize: 14, 
-                  color: 'rgba(255, 255, 255, 0.7)',
-                  lineHeight: '24px'
+                  fontSize: 13, 
+                  color: 'rgba(255, 255, 255, 0.7)'
                 }}>cents</span>
               </>
             )}
           </div>
         </div>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 10, alignItems: 'center', zIndex: 1200 }}>
+        <div style={{ display: 'flex', gap: 6, alignItems: 'center', zIndex: 1200, flexShrink: 0 }}>
           {/* Transport + audio toggle: Start/Stop -> Pause -> Audio */}
-          <div style={{ display: 'flex', gap: 8, alignItems: 'center', marginRight: 6 }}>
+          <div style={{ display: 'flex', gap: 6, alignItems: 'center' }}>
             <button
               onClick={() => {
                 const shouldStop = Boolean(isPlaying);
@@ -355,20 +357,22 @@ export default function TopRibbon() {
                 }
               }}
               aria-pressed={Boolean(isPlaying)}
-              style={{ padding: '8px 14px', borderRadius: 10, background: isPlaying ? '#ef4444' : '#10b981', border: 'none', color: '#fff', fontWeight: 700 }}
+              style={{ padding: '8px 12px', borderRadius: 10, background: isPlaying ? '#ef4444' : '#10b981', border: 'none', color: '#fff', fontWeight: 700, fontSize: 13, whiteSpace: 'nowrap' }}
             >{isPlaying ? 'Stop' : 'Start'}</button>
 
             <button 
               onClick={() => window.dispatchEvent(new CustomEvent('pause-alpha'))} 
               style={{ 
-                padding: '8px 14px', 
+                padding: '8px 12px', 
                 borderRadius: 10, 
                 background: 'rgba(255, 255, 255, 0.1)', 
                 backdropFilter: 'blur(10px)',
                 color: '#fff', 
                 border: '1px solid rgba(255, 255, 255, 0.2)', 
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: 13,
+                whiteSpace: 'nowrap'
               }}
             >Pause</button>
           </div>
@@ -378,16 +382,18 @@ export default function TopRibbon() {
               onClick={() => setShowSettings(v => !v)} 
               aria-haspopup="true" 
               style={{ 
-                padding: '8px 14px', 
+                padding: '8px 12px', 
                 borderRadius: 10, 
                 background: 'rgba(255, 255, 255, 0.1)', 
                 backdropFilter: 'blur(10px)',
                 color: '#fff', 
                 border: '1px solid rgba(255, 255, 255, 0.2)', 
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: 13,
+                whiteSpace: 'nowrap'
               }}
-            >Input Settings</button>
+            >Settings</button>
             {showSettings && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)' }}>
                 <SettingsPanel />
@@ -401,14 +407,16 @@ export default function TopRibbon() {
               onClick={() => setShowProfile(v => !v)} 
               aria-haspopup="true" 
               style={{ 
-                padding: '8px 14px', 
+                padding: '8px 12px', 
                 borderRadius: 10, 
                 background: 'rgba(255, 255, 255, 0.1)', 
                 backdropFilter: 'blur(10px)',
                 color: '#fff', 
                 border: '1px solid rgba(255, 255, 255, 0.2)', 
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: 13,
+                whiteSpace: 'nowrap'
               }}
             >Profile</button>
             {showProfile && (
@@ -422,14 +430,16 @@ export default function TopRibbon() {
               onClick={() => setShowLeaderboard(v => !v)} 
               aria-haspopup="true"
               style={{ 
-                padding: '8px 14px', 
+                padding: '8px 12px', 
                 borderRadius: 10, 
                 background: 'rgba(255, 255, 255, 0.1)', 
                 backdropFilter: 'blur(10px)',
                 color: '#fff', 
                 border: '1px solid rgba(255, 255, 255, 0.2)', 
                 fontWeight: 600,
-                cursor: 'pointer'
+                cursor: 'pointer',
+                fontSize: 13,
+                whiteSpace: 'nowrap'
               }}
             >Leaderboard</button>
             {showLeaderboard && (
