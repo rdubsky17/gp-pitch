@@ -26,7 +26,7 @@ type Frame = { t: number; ok: boolean; err: number; target: number };
 export type NoteResult = 'correct' | 'incorrect' | 'missed';
 export type BeatResults = Map<number, Map<number, NoteResult>>;
 
-export default function usePitchScorer() {
+export default function usePitchScorer(trackId: number | null = null) {
   // live readout for UI
   const [live, setLive] = useState<{ err: number; ok: boolean; target: number | null }>({
     err: 0,
@@ -38,6 +38,13 @@ export default function usePitchScorer() {
   
   // Track note results per beat for coloring
   const [noteResults, setNoteResults] = useState<BeatResults>(new Map());
+
+  // Store trackId in ref for access in event handlers
+  const trackIdRef = useRef<number | null>(trackId);
+  
+  useEffect(() => {
+    trackIdRef.current = trackId;
+  }, [trackId]);
 
   // validity tracking for database persistence
   const [validity, setValidity] = useState({

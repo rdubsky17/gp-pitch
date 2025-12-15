@@ -8,7 +8,18 @@ export async function GET(
 ) {
   try {
     const { path } = await params;
-    const filePath = join(process.cwd(), 'public', 'uploads', ...path);
+    
+    // Support both user uploads and library songs
+    // Path can be: ['user-1', 'filename.gp'] or ['songs', 'filename.gp']
+    let filePath: string;
+    if (path[0] === 'songs') {
+      // Library songs stored in public/songs/
+      filePath = join(process.cwd(), 'public', 'songs', ...path.slice(1));
+    } else {
+      // User uploads stored in public/uploads/
+      filePath = join(process.cwd(), 'public', 'uploads', ...path);
+    }
+    
     const file = await readFile(filePath);
 
     // Set appropriate content type for Guitar Pro files

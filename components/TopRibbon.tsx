@@ -29,8 +29,9 @@ export default function TopRibbon() {
   const [tracks, setTracks] = useState<Array<{ idx: number; name: string }>>([]);
   const [currentTrack, setCurrentTrack] = useState<number | null>(null);
   const [audioOn, setAudioOn] = useState(false);
-  const [songs, setSongs] = useState<Array<{ name: string; file: string }>>([]);
+  const [librarySongs, setLibrarySongs] = useState<Array<{ id: number; songName: string; artist: string; filePath: string; isUserUpload: boolean }>>([]);
   const [userUploads, setUserUploads] = useState<Array<{ id: number; songName: string; artist: string; filePath: string }>>([]);
+  const [currentTrackId, setCurrentTrackId] = useState<number | null>(null);
   const [uploading, setUploading] = useState(false);
   const [uploadError, setUploadError] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement | null>(null);
@@ -57,16 +58,18 @@ export default function TopRibbon() {
       if (typeof d.currentFile === 'string') setCurrentFile(d.currentFile);
     };
     window.addEventListener('tab-status', onTab as EventListener);
-    // fetch songs manifest for Songs popout
+    // fetch all tracks from database
     (async () => {
       try {
-        const res = await fetch('/songs.json');
+        const res = await fetch('/api/tracks');
         if (res.ok) {
           const data = await res.json();
-          setSongs(Array.isArray(data) ? data : []);
+          const allTracks = Array.isArray(data.tracks) ? data.tracks : [];
+          // Separate library songs from user uploads
+          setLibrarySongs(allTracks.filter((t: any) => !t.isUserUpload));
         }
       } catch (e) {
-        console.warn('Failed to load songs.json', e);
+        console.warn('Failed to load tracks', e);
       }
     })();
     return () => {
@@ -189,20 +192,6 @@ export default function TopRibbon() {
 
   // If we're on the login page, don't render anything (hooks ran but effects were noop)
   if (hideOnLogin) return null;
-
-  function getTrackIdFromFile(filePath: string): number | null {
-    const fileToTrackId: Record<string, number> = {
-      '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 1,
-      '/songs/Muse-Hysteria-09-20-2025.gp': 2,
-      '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 3,
-      '/songs/Jackson 5-I Want You Back-11-19-2025.gp': 4,
-      '/songs/Radiohead-Creep-12-05-2025.gp': 5,
-      '/songs/Pink Floyd-Money-10-26-2025.gp': 6,
-      '/songs/Red Hot Chili Peppers-Dark Necessities-08-25-2025.gp': 7,
-      "/songs/Red Hot Chili Peppers-Can't Stop-12-10-2025.gp": 8,
-    };
-    return fileToTrackId[filePath] ?? null;
-  }
 
   return (
     <>
@@ -444,7 +433,7 @@ export default function TopRibbon() {
             >Leaderboard</button>
             {showLeaderboard && (
               <div style={{ position: 'absolute', right: 0, top: 'calc(100% + 8px)', zIndex: 1300 }}>
-                <LeaderboardPanel trackId={getTrackIdFromFile(currentFile)} instrumentName={tracks.find(t => t.idx === currentTrack)?.name}/>
+                <LeaderboardPanel trackId={currentTrackId} instrumentName={tracks.find(t => t.idx === currentTrack)?.name}/>
               </div>
             )}
           </div>
@@ -552,16 +541,16 @@ export default function TopRibbon() {
             <div style={{ flex: 1, overflow: 'auto', padding: '0 24px 24px' }}>
               {songTab === 'library' ? (
                 <div>
-                  {songs.length === 0 ? (
+                  {librarySongs.length === 0 ? (
                     <div style={{ padding: '40px 20px', textAlign: 'center', color: '#666' }}>
                       <div style={{ fontSize: 48, marginBottom: 12 }}>🎵</div>
                       <div style={{ fontSize: 16 }}>No songs found</div>
                     </div>
                   ) : (
                     <div style={{ display: 'grid', gap: 8, paddingTop: 16 }}>
-                      {songs.map((s, i) => (
+                      {librarySongs.map((song) => (
                         <div
-                          key={i}
+                          key={song.id}
                           style={{
                             padding: '16px 20px',
                             borderRadius: 10,
@@ -571,7 +560,15 @@ export default function TopRibbon() {
                             border: '2px solid transparent',
                           }}
                           onClick={() => {
-                            window.dispatchEvent(new CustomEvent('load-song', { detail: { url: s.file } }));
+                            setCurrentTrackId(song.id);
+                            window.dispatchEvent(new CustomEvent('load-song', { 
+                              detail: { 
+                                url: song.filePath, 
+                                trackId: song.id,
+                                songName: song.songName,
+                                artist: song.artist
+                              } 
+                            }));
                             setShowSongModal(false);
                           }}
                           onMouseEnter={(e) => {
@@ -583,8 +580,11 @@ export default function TopRibbon() {
                             e.currentTarget.style.borderColor = 'transparent';
                           }}
                         >
-                          <div style={{ fontSize: 16, fontWeight: 600, color: '#111' }}>
-                            {s.name}
+                          <div style={{ fontSize: 16, fontWeight: 600, color: '#111', marginBottom: 2 }}>
+                            {song.songName}
+                          </div>
+                          <div style={{ fontSize: 13, color: '#666' }}>
+                            {song.artist}
                           </div>
                         </div>
                       ))}
@@ -655,7 +655,15 @@ export default function TopRibbon() {
                           <div
                             style={{ flex: 1, cursor: 'pointer' }}
                             onClick={() => {
-                              window.dispatchEvent(new CustomEvent('load-song', { detail: { url: upload.filePath } }));
+                              setCurrentTrackId(upload.id);
+                              window.dispatchEvent(new CustomEvent('load-song', { 
+                                detail: { 
+                                  url: upload.filePath, 
+                                  trackId: upload.id,
+                                  songName: upload.songName,
+                                  artist: upload.artist
+                                } 
+                              }));
                               setShowSongModal(false);
                             }}
                           >

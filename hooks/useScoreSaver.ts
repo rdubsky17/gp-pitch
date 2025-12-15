@@ -14,10 +14,16 @@ interface SaveScoreParams {
   currentFile: string;
   trackName: string;
   songName: string;
+  trackId?: number | null;
 }
 
-export function useScoreSaver() {
+export function useScoreSaver(trackId: number | null = null) {
   const lastSaveRef = useRef<number>(0);
+  const trackIdRef = useRef<number | null>(trackId);
+  
+  useEffect(() => {
+    trackIdRef.current = trackId;
+  }, [trackId]);
 
   useEffect(() => {
     const handleSongFinished = async (e: Event) => {
@@ -52,10 +58,10 @@ export function useScoreSaver() {
       // Calculate percentage
       const percentage = Math.round((score.hits / score.total) * 100);
 
-      // Get track ID from filename
-      const trackId = getTrackIdFromFile(currentFile);
-      if (!trackId) {
-        console.error('[useScoreSaver] Could not determine track ID from file:', currentFile);
+      // Get track ID from event detail or from hook parameter
+      const currentTrackId = detail.trackId ?? trackIdRef.current;
+      if (!currentTrackId) {
+        console.error('[useScoreSaver] Could not determine track ID. Not provided in event or hook parameter.');
         return;
       }
 
@@ -76,7 +82,7 @@ export function useScoreSaver() {
             total: score.total,
             songName,
             instrument: trackName,
-            trackId,
+            trackId: currentTrackId,
           },
         })
       );
@@ -142,27 +148,5 @@ export function useScoreSaver() {
       window.removeEventListener('song-finished-with-data', handleSongFinished as EventListener);
       window.removeEventListener('confirm-save-score', handleConfirmSave as EventListener);
     };
-    return () => {
-      window.removeEventListener('song-finished-with-data', handleSongFinished as EventListener);
-    };
   }, []);
-}
-
-// Helper to extract track ID from filename
-// This maps the file path to a database track ID
-function getTrackIdFromFile(filePath: string): number | null {
-  // For now, we'll use a simple mapping based on the filename
-  // In a real app, you'd want to store this mapping in your database or config
-  const fileToTrackId: Record<string, number> = {
-    '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 1,
-    '/songs/Muse-Hysteria-09-20-2025.gp': 2,
-    '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 3,
-    '/songs/Jackson 5-I Want You Back-11-19-2025.gp': 4,
-    '/songs/Radiohead-Creep-12-05-2025.gp': 5,
-    '/songs/Pink Floyd-Money-10-26-2025.gp': 6,
-    '/songs/Red Hot Chili Peppers-Dark Necessities-08-25-2025.gp': 7,
-    "/songs/Red Hot Chili Peppers-Can't Stop-12-10-2025.gp": 8,
-  };
-
-  return fileToTrackId[filePath] ?? null;
 }

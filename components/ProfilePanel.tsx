@@ -66,43 +66,27 @@ export default function ProfilePanel() {
     }
   }, [viewScoresModal, scoresTab]);
 
-  // Fetch user songs from default library and from user uploads
+  // Fetch user songs from database (both library and uploads)
   const fetchUserSongs = async () => {
     try {
-      const [songsRes, uploadsRes] = await Promise.all([
-        fetch('/songs.json'),
-        fetch('/api/uploads')
-      ]);
-
-      let libraryTracks: Track[] = [];
-      let uploadTracks: Track[] = [];
-
-      // Library tracks processing
-      if (songsRes.ok) {
-        const songsData = await songsRes.json();
-        const songsArray = Array.isArray(songsData) ? songsData : [];
-        libraryTracks = songsArray.map((s, idx) => ({
-          id: idx + 1, // id for defaults starts from 1
-          songName: s.name,
-          artist: undefined,
-          source: 'library' as const,
-        }))
-      }
-
-      // User uploaded tracks
-      if (uploadsRes.ok) {
-        const uploadsData = await uploadsRes.json();
-        const uploadsArray = uploadsData.tracks || [];
-        uploadTracks = uploadsArray.map((s: { id: any; songName: any; artist: any; }) => ({
-          id: s.id,
-          songName: s.songName,
-          artist: s.artist,
-          source: 'upload' as const,
+      const res = await fetch('/api/tracks');
+      
+      if (res.ok) {
+        const data = await res.json();
+        const allTracks = data.tracks || [];
+        
+        // Map to Track format with source indication
+        const mappedTracks = allTracks.map((t: any) => ({
+          id: t.id,
+          songName: t.songName,
+          artist: t.artist,
+          source: t.isUserUpload ? ('upload' as const) : ('library' as const),
         }));
+        
+        setTracks(mappedTracks);
       }
-      setTracks([...libraryTracks, ...uploadTracks]);
     } catch (error) {
-      console.error('Failed to fetch songs:', error);
+      console.error('Failed to fetch tracks:', error);
     }
   };
 

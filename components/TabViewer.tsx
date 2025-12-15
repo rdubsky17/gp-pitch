@@ -10,12 +10,24 @@ type TrackItem = { idx: number; name: string };
 
 export default function TabViewer({ fileUrl }: Props) {
   const [currentFile, setCurrentFile] = useState<string>(fileUrl);
+  const [currentTrackId, setCurrentTrackId] = useState<number | null>(null);
+  const [currentSongName, setCurrentSongName] = useState<string>('Unknown Song');
+  const [currentArtist, setCurrentArtist] = useState<string>('Unknown Artist');
+  
   // allow external load requests
   useEffect(() => {
     const onLoad = (e: Event) => {
       const d = (e as CustomEvent).detail || {};
       const url = typeof d.url === 'string' ? d.url : d.file;
-      if (typeof url === 'string' && url) setCurrentFile(url);
+      const trackId = typeof d.trackId === 'number' ? d.trackId : null;
+      const songName = typeof d.songName === 'string' ? d.songName : 'Unknown Song';
+      const artist = typeof d.artist === 'string' ? d.artist : 'Unknown Artist';
+      if (typeof url === 'string' && url) {
+        setCurrentFile(url);
+        setCurrentTrackId(trackId);
+        setCurrentSongName(songName);
+        setCurrentArtist(artist);
+      }
     };
     window.addEventListener('load-song', onLoad as EventListener);
     return () => window.removeEventListener('load-song', onLoad as EventListener);
@@ -25,7 +37,7 @@ export default function TabViewer({ fileUrl }: Props) {
   const apiRef      = useRef<any>(null);
   const trackIdxRef = useRef<number | null>(null);
 
-  const { live, score, validity, validityRef, scoreRef, noteResults } = usePitchScorer();
+  const { live, score, validity, validityRef, scoreRef, noteResults } = usePitchScorer(currentTrackId);
 
   const [ready, setReady]         = useState(false);
   const [isPlaying, setIsPlaying] = useState(false);
@@ -211,18 +223,8 @@ export default function TabViewer({ fileUrl }: Props) {
         console.error('[TabViewer] Error getting track:', e);
       }
 
-      // Get song name from filename
-      const songNameMap: Record<string, string> = {
-        '/songs/Gorillaz-Feel Good Inc.-09-23-2025.gp': 'Feel Good Inc.',
-        '/songs/Muse-Hysteria-09-20-2025.gp': 'Hysteria',
-        '/songs/Red Hot Chili Peppers-Aeroplane-09-11-2025.gp': 'Aeroplane',
-        '/songs/Jackson 5-I Want You Back-11-19-2025.gp': 'I Want You Back',
-        '/songs/Radiohead-Creep-12-05-2025.gp': 'Creep',
-        '/songs/Pink Floyd-Money-10-26-2025.gp': 'Money',
-        '/songs/Red Hot Chili Peppers-Dark Necessities-08-25-2025.gp': 'Dark Necessities',
-        "/songs/Red Hot Chili Peppers-Can't Stop-12-10-2025.gp": "Can't Stop",
-      };
-      const songName = songNameMap[currentFile] || 'Unknown Song';
+      // Use song name from state (passed via load-song event)
+      const songName = currentSongName;
 
       // Emit basic event for backward compatibility
       window.dispatchEvent(new CustomEvent('song-finished'));
@@ -239,6 +241,7 @@ export default function TabViewer({ fileUrl }: Props) {
           currentFile,
           trackName: instrumentName,
           songName,
+          trackId: currentTrackId,
         }
       }));
     });

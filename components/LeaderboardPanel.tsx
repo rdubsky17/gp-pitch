@@ -44,8 +44,10 @@ export default function LeaderboardPanel({trackId, instrumentName}: track) {
     }
 
     useEffect(() => {
-        fetchScores();
-    })
+        if (trackId && instrumentName) {
+            fetchScores();
+        }
+    }, [trackId, instrumentName]);
 
     return (
         <div style={{padding: 12, background: '#fff', color: '#111', borderRadius: 6, boxShadow: '0 6px 18px rgba(0,0,0,0.15)', minWidth: 175}}>
